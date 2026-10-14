@@ -2,7 +2,7 @@ use std::sync::Arc;
 use winit::window::Window;
 
 pub struct State {
-    window: Arc<Window>,
+    pub window: Arc<Window>,
     // surface: wgpu::Surface<'static>,
     // device: wgpu::Device,
     // queue: wgpu::Queue,
