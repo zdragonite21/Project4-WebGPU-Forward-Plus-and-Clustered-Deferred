@@ -159,7 +159,8 @@ impl State {
         self.window.request_redraw();
 
         if !self.is_surface_configured {
-            bail!("surface not configured yet; skipping render");
+            log::debug!("surface not configured yet; skipping render");
+            return Ok(());
         }
 
         let (output, reconfigure_after_present) = {
@@ -169,20 +170,23 @@ impl State {
                 Success(surface_texture) => (surface_texture, false),
                 Suboptimal(surface_texture) => (surface_texture, true),
                 Timeout => {
-                    bail!("surface texture acquisition timed out; skipping frame");
+                    log::debug!("surface texture acquisition timed out; skipping frame");
+                    return Ok(());
                 }
                 Occluded => {
-                    bail!("surface is occluded; skipping frame");
+                    log::debug!("surface is occluded; skipping frame");
+                    return Ok(());
                 }
                 Validation => {
-                    bail!("surface texture acquisition failed validation; skipping frame");
+                    bail!("surface texture acquisition failed validation; terminate");
                 }
                 Outdated => {
                     self.surface.configure(&self.device, &self.config);
-                    bail!("surface outdated; reconfiguring");
+                    log::debug!("surface outdated; reconfiguring");
+                    return Ok(());
                 }
                 Lost => {
-                    anyhow::bail!("Lost device");
+                    bail!("lost surface");
                 }
             }
         };
