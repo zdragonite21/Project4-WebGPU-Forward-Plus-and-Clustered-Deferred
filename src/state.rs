@@ -5,6 +5,7 @@ use winit::{
     keyboard::{KeyCode, PhysicalKey},
     window::Window,
 };
+use crate::renderers::{Renderer, naive::NaiveRenderer};
 
 pub struct State {
     pub window: Arc<Window>,
@@ -13,6 +14,7 @@ pub struct State {
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
     render_format: wgpu::TextureFormat,
+    renderer: Box<dyn Renderer>,
 
     is_surface_configured: bool,
 }
@@ -104,6 +106,8 @@ impl State {
                 desired_maximum_frame_latency: 2,
             };
 
+        let renderer = Box::new(NaiveRenderer::new(&device, render_format));
+
         log::debug!("renderer created");
 
         Ok(Self {
@@ -113,6 +117,7 @@ impl State {
             queue,
             config,
             render_format,
+            renderer,
             is_surface_configured: false,
         })
     }
@@ -203,29 +208,7 @@ impl State {
             ..Default::default()
         });
 
-        {
-            let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Render Pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    depth_slice: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
-                            a: 1.0,
-                        }),
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                occlusion_query_set: None,
-                timestamp_writes: None,
-                multiview_mask: None,
-            });
-        }
+        self.renderer.draw(&mut encoder, &view)?;
 
         self.queue.submit([encoder.finish()]);
         self.queue.present(output);
