@@ -2,7 +2,7 @@ use crate::state::State;
 use std::sync::Arc;
 use winit::{
     application::ApplicationHandler,
-    event::{KeyEvent, WindowEvent},
+    event::{ElementState, KeyEvent, WindowEvent},
     event_loop::{ActiveEventLoop, EventLoop},
     keyboard::{KeyCode, PhysicalKey},
     window::Window,
@@ -99,25 +99,28 @@ impl ApplicationHandler<State> for App {
             None => return,
         };
 
-        match event {
-            WindowEvent::CloseRequested => event_loop.exit(),
-            WindowEvent::Resized(size) => state.resize(size.width, size.height),
-            WindowEvent::RedrawRequested => {
-                state.render();
-            }
-            WindowEvent::KeyboardInput {
-                event:
-                    KeyEvent {
-                        physical_key: PhysicalKey::Code(code),
-                        state: key_state,
-                        ..
-                    },
-                ..
-            } => match (code, key_state.is_pressed()) {
-                (KeyCode::Escape, true) => event_loop.exit(),
+        if !(state.handle_shortcut(&event)) {
+            match event {
+                WindowEvent::CloseRequested
+                | WindowEvent::KeyboardInput {
+                    event:
+                        KeyEvent {
+                            state: ElementState::Pressed,
+                            physical_key: PhysicalKey::Code(KeyCode::Escape),
+                            ..
+                        },
+                    ..
+                } => event_loop.exit(),
+                WindowEvent::Resized(size) => state.resize(size.width, size.height),
+                WindowEvent::RedrawRequested => match state.render() {
+                    Ok(_) => {}
+                    Err(e) => {
+                        log::error!("{e}");
+                        event_loop.exit();
+                    }
+                },
                 _ => {}
-            },
-            _ => {}
+            }
         }
     }
 }
@@ -125,7 +128,7 @@ impl ApplicationHandler<State> for App {
 pub fn run() -> anyhow::Result<()> {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        env_logger::init();
+        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("forward_plus=debug")).init();
     }
     #[cfg(target_arch = "wasm32")]
     {
