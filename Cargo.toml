@@ -27,3 +27,6 @@ web-sys = { version = "0.3", features = [
     "Window",
     "Element",
 ]}
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
