@@ -1,3 +1,7 @@
+use crate::{
+    renderers::{Renderer, naive::NaiveRenderer},
+    scene::Scene,
+};
 use anyhow::bail;
 use std::sync::Arc;
 use winit::{
@@ -5,7 +9,6 @@ use winit::{
     keyboard::{KeyCode, PhysicalKey},
     window::Window,
 };
-use crate::renderers::{Renderer, naive::NaiveRenderer};
 
 pub struct State {
     pub window: Arc<Window>,
@@ -14,6 +17,8 @@ pub struct State {
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
     render_format: wgpu::TextureFormat,
+
+    scene: Scene,
     renderer: Box<dyn Renderer>,
 
     is_surface_configured: bool,
@@ -75,7 +80,7 @@ impl State {
             .copied()
             .find(wgpu::TextureFormat::is_srgb)
             .unwrap_or_else(|| {
-                log::warn!("No sRGB surface format available; colors may appear darker");
+                log::info!("No sRGB surface format available; colors may appear darker");
                 surface_caps.formats[0]
             });
 
@@ -108,6 +113,8 @@ impl State {
 
         let renderer = Box::new(NaiveRenderer::new(&device, render_format));
 
+        let scene = Scene::new(&device);
+
         log::debug!("renderer created");
 
         Ok(Self {
@@ -118,6 +125,7 @@ impl State {
             config,
             render_format,
             renderer,
+            scene,
             is_surface_configured: false,
         })
     }
@@ -208,7 +216,7 @@ impl State {
             ..Default::default()
         });
 
-        self.renderer.draw(&mut encoder, &view)?;
+        self.renderer.draw(&mut encoder, &view, &self.scene)?;
 
         self.queue.submit([encoder.finish()]);
         self.queue.present(output);

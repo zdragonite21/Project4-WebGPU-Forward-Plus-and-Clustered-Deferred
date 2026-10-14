@@ -1,3 +1,5 @@
+use crate::scene::{Scene, Vertex};
+
 use super::Renderer;
 
 pub struct NaiveRenderer {
@@ -21,7 +23,7 @@ impl NaiveRenderer {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"),
-                buffers: &[],
+                buffers: &[Some(Vertex::desc())],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
@@ -58,7 +60,12 @@ impl NaiveRenderer {
 }
 
 impl Renderer for NaiveRenderer {
-    fn draw(&mut self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) -> anyhow::Result<()> {
+    fn draw(
+        &mut self,
+        encoder: &mut wgpu::CommandEncoder,
+        view: &wgpu::TextureView,
+        scene: &Scene,
+    ) -> anyhow::Result<()> {
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Render Pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -82,8 +89,11 @@ impl Renderer for NaiveRenderer {
         });
 
         render_pass.set_pipeline(&self.pipeline);
-        render_pass.draw(0..3, 0..1);
-        
+        render_pass.set_vertex_buffer(0, scene.vertex_buffer.slice(..));
+        render_pass.set_index_buffer(scene.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+        render_pass.set_vertex_buffer(0, scene.vertex_buffer.slice(..));
+        render_pass.draw_indexed(0..scene.num_indices, 0, 0..1);
+
         Ok(())
     }
 }
