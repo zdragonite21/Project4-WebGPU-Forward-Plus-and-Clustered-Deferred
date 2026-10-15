@@ -1,13 +1,12 @@
 use crate::{
-    renderers::{Renderer, naive::NaiveRenderer},
-    scene::Scene,
+    camera::{CameraRig, CameraSettings}, frame_clock::FrameClock, renderers::{Renderer, naive::NaiveRenderer}, scene::Scene,
 };
 use anyhow::bail;
 use std::sync::Arc;
 use winit::{
-    event::{ElementState, KeyEvent, WindowEvent},
+    event::{ElementState, KeyEvent, MouseButton, WindowEvent},
     keyboard::{KeyCode, PhysicalKey},
-    window::Window,
+    window::{CursorGrabMode, Window},
 };
 
 pub struct State {
@@ -18,7 +17,9 @@ pub struct State {
     config: wgpu::SurfaceConfiguration,
     render_format: wgpu::TextureFormat,
 
+    pub cam_rig: CameraRig,
     scene: Scene,
+    frame_clock: FrameClock,
     renderer: Box<dyn Renderer>,
 
     is_surface_configured: bool,
@@ -111,9 +112,17 @@ impl State {
                 desired_maximum_frame_latency: 2,
             };
 
-        let renderer = Box::new(NaiveRenderer::new(&device, render_format));
+        let cam_rig = CameraRig::new(&device, &CameraSettings::default(), size.width, size.height);
 
         let scene = Scene::new(&device);
+
+        let frame_clock = FrameClock::new();
+
+        let renderer = Box::new(NaiveRenderer::new(
+            &device,
+            render_format,
+            &cam_rig.bind_group_layout,
+        ));
 
         log::debug!("renderer created");
 
@@ -124,10 +133,73 @@ impl State {
             queue,
             config,
             render_format,
-            renderer,
+            cam_rig,
             scene,
+            frame_clock,
+            renderer,
             is_surface_configured: false,
         })
+    }
+
+    fn set_cam_capture(&mut self, captured: bool) {
+        self.cam_rig.controller.set_captured(captured);
+        self.window.set_cursor_visible(!captured);
+
+        if captured {
+            match self
+                .window
+                .set_cursor_grab(CursorGrabMode::Locked)
+                .or_else(|_| self.window.set_cursor_grab(CursorGrabMode::Confined))
+            {
+                Ok(()) => log::debug!("cursor captured"),
+                Err(err) => {
+                    self.cam_rig.controller.set_captured(false);
+                    self.window.set_cursor_visible(true);
+                    log::info!("failed to capture cursor: {err}");
+                }
+            }
+        } else {
+            let _ = self.window.set_cursor_grab(CursorGrabMode::None);
+            log::debug!("cursor released");
+        }
+    }
+
+    pub fn handle_cam_input(&mut self, event: &WindowEvent) -> bool {
+        match event {
+            WindowEvent::KeyboardInput {
+                event:
+                    KeyEvent {
+                        physical_key: PhysicalKey::Code(key),
+                        state,
+                        ..
+                    },
+                ..
+            } => self.cam_rig.controller.process_keyboard(*key, *state),
+            WindowEvent::MouseWheel { delta, .. } if self.cam_rig.controller.is_captured() => {
+                self.cam_rig.controller.handle_mouse_scroll(delta);
+                true
+            }
+            WindowEvent::MouseInput { state, button, .. }
+                if *button == MouseButton::Left && *state == ElementState::Pressed =>
+            {
+                self.set_cam_capture(true);
+                true
+            }
+            WindowEvent::MouseInput { state, button, .. }
+                if *button == MouseButton::Left
+                    && *state == ElementState::Released
+                    && self.cam_rig.controller.is_captured() =>
+            {
+                self.set_cam_capture(false);
+                true
+            }
+            WindowEvent::Focused(false) => {
+                self.set_cam_capture(false);
+                log::debug!("window lost focus, cursor released");
+                true
+            }
+            _ => false,
+        }
     }
 
     pub fn handle_shortcut(&mut self, event: &WindowEvent) -> bool {
@@ -150,15 +222,13 @@ impl State {
         }
     }
 
-    fn _update(&mut self) {
-        todo!()
-    }
-
     pub fn resize(&mut self, width: u32, height: u32) {
         if width > 0 && height > 0 {
             self.config.width = width;
             self.config.height = height;
             self.surface.configure(&self.device, &self.config);
+
+            self.cam_rig.resize(width, height);
 
             log::debug!("surface resized to {}x{}", width, height);
 
@@ -168,7 +238,12 @@ impl State {
         }
     }
 
-    pub fn render(&mut self) -> anyhow::Result<()> {
+    fn update(&mut self, dt: instant::Duration) {
+        self.cam_rig.update(&self.queue, dt);
+    }
+
+    pub fn frame(&mut self) -> anyhow::Result<()> {
+        self.frame_clock.tick();
         self.window.request_redraw();
 
         if !self.is_surface_configured {
@@ -204,6 +279,8 @@ impl State {
             }
         };
 
+        self.update(self.frame_clock.dt);
+
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -216,7 +293,8 @@ impl State {
             ..Default::default()
         });
 
-        self.renderer.draw(&mut encoder, &view, &self.scene)?;
+        self.renderer
+            .draw(&mut encoder, &view, &self.cam_rig.bind_group, &self.scene)?;
 
         self.queue.submit([encoder.finish()]);
         self.queue.present(output);

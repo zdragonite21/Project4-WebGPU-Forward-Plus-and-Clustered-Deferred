@@ -17,7 +17,9 @@ strip = true
 anyhow = "1.0.104"
 bytemuck = { version = "1.25", features = ["derive"] }
 env_logger = "0.11.11"
+glam = { version = "0.34", features = ["bytemuck"] }
 gltf = "1.4.1"
+instant = "0.1.13"
 log = "0.4.34"
 pollster = "1.0.1"
 wgpu = "30"
@@ -29,6 +31,7 @@ console_log = "1.0"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4.30"
 web-sys = { version = "0.3", features = ["Document", "Window", "Element"] }
+instant = { version = "0.1.13", features = ["wasm-bindgen"] }
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false

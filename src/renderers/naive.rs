@@ -1,4 +1,4 @@
-use crate::scene::{Scene, Vertex};
+use crate::scene::{INDEX_FORMAT, Scene, Vertex};
 
 use super::Renderer;
 
@@ -7,13 +7,17 @@ pub struct NaiveRenderer {
 }
 
 impl NaiveRenderer {
-    pub fn new(device: &wgpu::Device, render_format: wgpu::TextureFormat) -> Self {
+    pub fn new(
+        device: &wgpu::Device,
+        render_format: wgpu::TextureFormat,
+        cam_layout: &wgpu::BindGroupLayout,
+    ) -> Self {
         let shader = device.create_shader_module(wgpu::include_wgsl!("../shaders/shader.wgsl"));
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[],
+                bind_group_layouts: &[Some(&cam_layout)],
                 immediate_size: 0,
             });
 
@@ -64,12 +68,13 @@ impl Renderer for NaiveRenderer {
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
         view: &wgpu::TextureView,
+        cam_bg: &wgpu::BindGroup,
         scene: &Scene,
     ) -> anyhow::Result<()> {
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Render Pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: &view,
+                view: view,
                 resolve_target: None,
                 depth_slice: None,
                 ops: wgpu::Operations {
@@ -89,9 +94,11 @@ impl Renderer for NaiveRenderer {
         });
 
         render_pass.set_pipeline(&self.pipeline);
+        render_pass.set_bind_group(0, cam_bg, &[]);
+
         render_pass.set_vertex_buffer(0, scene.vertex_buffer.slice(..));
-        render_pass.set_index_buffer(scene.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-        render_pass.set_vertex_buffer(0, scene.vertex_buffer.slice(..));
+        render_pass.set_index_buffer(scene.index_buffer.slice(..), INDEX_FORMAT);
+
         render_pass.draw_indexed(0..scene.num_indices, 0, 0..1);
 
         Ok(())

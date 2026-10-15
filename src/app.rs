@@ -2,7 +2,7 @@ use crate::state::State;
 use std::sync::Arc;
 use winit::{
     application::ApplicationHandler,
-    event::{ElementState, KeyEvent, WindowEvent},
+    event::{DeviceEvent, ElementState, KeyEvent, WindowEvent},
     event_loop::{ActiveEventLoop, EventLoop},
     keyboard::{KeyCode, PhysicalKey},
     window::Window,
@@ -88,6 +88,24 @@ impl ApplicationHandler<State> for App {
         self.state = Some(event);
     }
 
+    fn device_event(
+        &mut self,
+        _event_loop: &ActiveEventLoop,
+        _device_id: winit::event::DeviceId,
+        event: winit::event::DeviceEvent,
+    ) {
+        let state = match &mut self.state {
+            Some(canvas) => canvas,
+            None => return,
+        };
+
+        if let DeviceEvent::MouseMotion { delta } = event
+            && state.cam_rig.controller.is_captured()
+        {
+            state.cam_rig.controller.handle_mouse(delta.0, delta.1);
+        }
+    }
+
     fn window_event(
         &mut self,
         event_loop: &ActiveEventLoop,
@@ -99,7 +117,7 @@ impl ApplicationHandler<State> for App {
             None => return,
         };
 
-        if !(state.handle_shortcut(&event)) {
+        if !(state.handle_shortcut(&event) || state.handle_cam_input(&event)) {
             match event {
                 WindowEvent::CloseRequested
                 | WindowEvent::KeyboardInput {
@@ -112,7 +130,7 @@ impl ApplicationHandler<State> for App {
                     ..
                 } => event_loop.exit(),
                 WindowEvent::Resized(size) => state.resize(size.width, size.height),
-                WindowEvent::RedrawRequested => match state.render() {
+                WindowEvent::RedrawRequested => match state.frame() {
                     Ok(_) => {}
                     Err(e) => {
                         log::error!("{e}");
@@ -128,7 +146,10 @@ impl ApplicationHandler<State> for App {
 pub fn run() -> anyhow::Result<()> {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("forward_plus=debug")).init();
+        env_logger::Builder::from_env(
+            env_logger::Env::default().default_filter_or("forward_plus=debug"),
+        )
+        .init();
     }
     #[cfg(target_arch = "wasm32")]
     {

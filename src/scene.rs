@@ -13,6 +13,8 @@ pub struct Vertex {
     color: [f32; 3],
 }
 
+pub const INDEX_FORMAT: wgpu::IndexFormat = wgpu::IndexFormat::Uint32;
+
 impl Vertex {
     const ATTRIBS: [wgpu::VertexAttribute; 2] =
         wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3];
@@ -49,7 +51,7 @@ const VERTICES: &[Vertex] = &[
     }, // E
 ];
 
-const INDICES: &[u16] = &[0, 1, 4, 1, 2, 4, 2, 3, 4];
+const INDICES: &[u32] = &[0, 1, 4, 1, 2, 4, 2, 3, 4];
 
 impl Scene {
     pub fn new(device: &wgpu::Device) -> Self {
