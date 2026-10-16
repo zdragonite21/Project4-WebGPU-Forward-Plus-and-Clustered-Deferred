@@ -2,7 +2,6 @@ use crate::input::{CursorState, Input};
 use glam::{Mat4, Quat, Vec3, camera};
 use instant::Duration;
 use std::f32::consts::FRAC_PI_2;
-use wgpu::util::DeviceExt;
 use winit::{event::MouseButton, keyboard::KeyCode};
 
 const SAFE_FRAC_PI_2: f32 = FRAC_PI_2 - 0.0001;
@@ -89,24 +88,6 @@ impl Projection {
     }
 }
 
-#[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-struct CameraUniform {
-    view_proj: Mat4,
-}
-
-impl CameraUniform {
-    fn new(camera: &Camera, projection: &Projection) -> Self {
-        Self {
-            view_proj: projection.proj_matrix() * camera.view_matrix(),
-        }
-    }
-
-    fn update_view_proj(&mut self, camera: &Camera, projection: &Projection) {
-        self.view_proj = projection.proj_matrix() * camera.view_matrix();
-    }
-}
-
 #[derive(Debug, Default)]
 pub struct CameraController {
     settings: CameraSettings,
@@ -172,59 +153,20 @@ pub struct CameraRig {
     pub camera: Camera,
     pub projection: Projection,
     pub controller: CameraController,
-
-    uniform: CameraUniform,
-    buffer: wgpu::Buffer,
-    pub bind_group_layout: wgpu::BindGroupLayout,
-    pub bind_group: wgpu::BindGroup,
 }
 
 impl CameraRig {
     const MAX_FRAME_DT: Duration = Duration::from_millis(120);
 
-    pub fn new(device: &wgpu::Device, settings: CameraSettings, width: u32, height: u32) -> Self {
+    pub fn new(settings: CameraSettings, width: u32, height: u32) -> Self {
         let camera = Camera::default();
         let projection = Projection::new(width, height, 45.0, 0.1, 100.0);
         let controller = CameraController::new(settings);
-        let uniform = CameraUniform::new(&camera, &projection);
-
-        let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Camera Buffer"),
-            contents: bytemuck::cast_slice(&[uniform]),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
-
-        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            }],
-            label: Some("camera_bind_group_layout"),
-        });
-
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: buffer.as_entire_binding(),
-            }],
-            label: Some("camera_bind_group"),
-        });
 
         Self {
             camera,
             projection,
             controller,
-            uniform,
-            buffer,
-            bind_group_layout,
-            bind_group,
         }
     }
 
@@ -232,20 +174,10 @@ impl CameraRig {
         self.projection.resize(width, height);
     }
 
-    pub fn update(
-        &mut self,
-        queue: &wgpu::Queue,
-        input: &Input,
-        cursor: &mut CursorState,
-        dt: Duration,
-    ) {
+    pub fn update(&mut self, input: &Input, cursor: &mut CursorState, dt: Duration) {
         let dt = dt.min(Self::MAX_FRAME_DT);
 
         self.controller
             .update_camera(&mut self.camera, input, cursor, dt.as_secs_f32());
-
-        self.uniform
-            .update_view_proj(&self.camera, &self.projection);
-        queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(&[self.uniform]));
     }
 }

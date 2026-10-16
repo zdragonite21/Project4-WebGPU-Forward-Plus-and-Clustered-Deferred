@@ -2,18 +2,23 @@ use crate::{
     frame_clock::FrameClock,
     gpu::Gpu,
     input::{CursorState, Input},
-    render::{Renderer, naive::NaiveRenderer},
+    render::{Renderer, naive::NaiveRenderer, resources::RenderResources},
+    scene::Scene,
     world::World,
 };
 use std::sync::Arc;
 use winit::{
-    event::{DeviceEvent, KeyEvent, WindowEvent}, keyboard::{KeyCode, PhysicalKey}, window::{CursorGrabMode, Window},
+    event::{DeviceEvent, KeyEvent, WindowEvent},
+    keyboard::{KeyCode, PhysicalKey},
+    window::{CursorGrabMode, Window},
 };
 
 pub struct App {
     pub window: Arc<Window>,
     gpu: Gpu,
     world: World,
+    scene: Scene,
+    render_resources: RenderResources,
     renderer: Box<dyn Renderer>,
     input: Input,
     cursor: CursorState,
@@ -25,13 +30,18 @@ impl App {
         let gpu = Gpu::new(window.clone()).await?;
         log::debug!("gpu context created");
 
-        let world = World::new(&gpu.device, gpu.size().x, gpu.size().y);
+        let world = World::new(gpu.size().x, gpu.size().y);
         log::debug!("world created");
+
+        let scene = Scene::new(&gpu.device);
+        log::debug!("scene created");
+
+        let render_resources = RenderResources::new(&gpu.device, &world.cam_rig);
 
         let renderer = Box::new(NaiveRenderer::new(
             &gpu.device,
             gpu.render_format,
-            &world.cam_rig.bind_group_layout,
+            &render_resources.camera.bind_group_layout,
         ));
         log::debug!("renderer created");
 
@@ -43,6 +53,8 @@ impl App {
             window,
             gpu,
             world,
+            scene,
+            render_resources,
             renderer,
             input,
             cursor,
@@ -70,11 +82,12 @@ impl App {
                         ..
                     },
                 ..
-            } =>{
+            } => {
                 if *key == KeyCode::Escape {
                     return true;
-                } 
-                self.input.on_key(*key, state.is_pressed(), *repeat)},
+                }
+                self.input.on_key(*key, state.is_pressed(), *repeat)
+            }
 
             WindowEvent::MouseInput { state, button, .. } => {
                 self.input.on_mouse_button(*button, state.is_pressed())
@@ -141,12 +154,9 @@ impl App {
 
         // frame
         self.frame_clock.tick();
-        self.world.update(
-            &self.gpu.queue,
-            &self.input,
-            &mut self.cursor,
-            self.frame_clock.dt,
-        );
+        self.world
+            .update(&self.input, &mut self.cursor, self.frame_clock.dt);
+        self.render_resources.upload(&self.gpu.queue, &self.world.cam_rig);
 
         let mut encoder = self
             .gpu
@@ -159,8 +169,8 @@ impl App {
         self.renderer.draw(
             &mut encoder,
             &frame.view,
-            &self.world.cam_rig.bind_group,
-            &self.world.scene,
+            &self.render_resources.camera.bind_group,
+            &self.scene,
         )?;
 
         // finish frame
