@@ -2,9 +2,8 @@ use crate::app::App;
 use std::sync::Arc;
 use winit::{
     application::ApplicationHandler,
-    event::{ElementState, KeyEvent, WindowEvent},
+    event::WindowEvent,
     event_loop::{ActiveEventLoop, EventLoop},
-    keyboard::{KeyCode, PhysicalKey},
     window::Window,
 };
 
@@ -109,28 +108,22 @@ impl ApplicationHandler<App> for AppHandler {
             None => return,
         };
 
-        if !app.handle_window_event(&event) {
-            match event {
-                WindowEvent::CloseRequested
-                | WindowEvent::KeyboardInput {
-                    event:
-                        KeyEvent {
-                            state: ElementState::Pressed,
-                            physical_key: PhysicalKey::Code(KeyCode::Escape),
-                            ..
-                        },
-                    ..
-                } => event_loop.exit(),
-                WindowEvent::Resized(size) => app.resize(size.width, size.height),
-                WindowEvent::RedrawRequested => match app.frame() {
-                    Ok(_) => {}
-                    Err(e) => {
-                        log::error!("{e}");
-                        event_loop.exit();
-                    }
-                },
-                _ => {}
-            }
+        if app.handle_window_event(&event) {
+            event_loop.exit();
+            return;
+        }
+
+        match event {
+            WindowEvent::CloseRequested => event_loop.exit(),
+            WindowEvent::Resized(size) => app.resize(size.width, size.height),
+            WindowEvent::RedrawRequested => match app.frame() {
+                Ok(_) => {}
+                Err(e) => {
+                    log::error!("{e}");
+                    event_loop.exit();
+                }
+            },
+            _ => {}
         }
     }
 }

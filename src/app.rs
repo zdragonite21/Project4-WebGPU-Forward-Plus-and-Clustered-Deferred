@@ -7,9 +7,7 @@ use crate::{
 };
 use std::sync::Arc;
 use winit::{
-    event::{DeviceEvent, KeyEvent, WindowEvent},
-    keyboard::PhysicalKey,
-    window::{CursorGrabMode, Window},
+    event::{DeviceEvent, KeyEvent, WindowEvent}, keyboard::{KeyCode, PhysicalKey}, window::{CursorGrabMode, Window},
 };
 
 pub struct App {
@@ -52,14 +50,13 @@ impl App {
         })
     }
 
-    pub fn handle_device_event(&mut self, event: &DeviceEvent) -> bool {
+    pub fn handle_device_event(&mut self, event: &DeviceEvent) {
         match event {
             DeviceEvent::MouseMotion { delta } => {
                 self.input.on_mouse_motion(delta.0, delta.1);
             }
-            _ => return false,
+            _ => (),
         }
-        true
     }
 
     pub fn handle_window_event(&mut self, event: &WindowEvent) -> bool {
@@ -73,7 +70,11 @@ impl App {
                         ..
                     },
                 ..
-            } => self.input.on_key(*key, state.is_pressed(), *repeat),
+            } =>{
+                if *key == KeyCode::Escape {
+                    return true;
+                } 
+                self.input.on_key(*key, state.is_pressed(), *repeat)},
 
             WindowEvent::MouseInput { state, button, .. } => {
                 self.input.on_mouse_button(*button, state.is_pressed())
@@ -87,7 +88,7 @@ impl App {
             }
             _ => return false,
         }
-        true
+        false
     }
 
     fn update_capture(&mut self) {
