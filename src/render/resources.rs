@@ -1,20 +1,20 @@
 use glam::Mat4;
 use wgpu::util::DeviceExt;
 
-use crate::camera::{Camera, CameraRig, Projection};
+use crate::{camera::{Camera, CameraRig, Projection}, world::World};
 
 pub struct RenderResources {
     pub camera: CameraGpu,
 }
 
 impl RenderResources {
-    pub fn new(device: &wgpu::Device, cam_rig: &CameraRig) -> Self {
-        let camera = CameraGpu::new(device, cam_rig);
+    pub fn new(device: &wgpu::Device, world: &World) -> Self {
+        let camera = CameraGpu::new(device, &world.cam_rig);
         Self { camera }
     }
 
-    pub fn upload(&mut self, queue: &wgpu::Queue, cam_rig: &CameraRig) {
-        self.camera.upload(queue, cam_rig);
+    pub fn upload(&mut self, queue: &wgpu::Queue, world: &World) {
+        self.camera.upload(queue, &world.cam_rig);
     }
 }
 

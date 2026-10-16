@@ -3,7 +3,8 @@ use crate::{
     input::{CursorState, Input},
 };
 use std::time::Duration;
-// updated once per frame
+
+// cpu side state that is updated once per frame
 pub struct World {
     pub cam_rig: CameraRig,
 }
