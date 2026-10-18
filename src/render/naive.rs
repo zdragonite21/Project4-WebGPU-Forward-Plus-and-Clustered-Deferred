@@ -1,6 +1,7 @@
 use crate::{
     assets::{
-        self, Handle, INDEX_FORMAT, Material, RenderAssets, Texture, gltf_loader::GltfVertex,
+        Handle, INDEX_FORMAT, RenderAssets, gltf_loader::GltfVertex, material::GpuMaterial,
+        texture::GpuTexture,
     },
     render::resources::RenderResources,
     world::World,
@@ -10,7 +11,7 @@ use super::Renderer;
 
 pub struct NaiveRenderer {
     pipeline: wgpu::RenderPipeline,
-    depth_texture: Texture,
+    depth_texture: GpuTexture,
 }
 
 impl NaiveRenderer {
@@ -19,11 +20,13 @@ impl NaiveRenderer {
         render_format: wgpu::TextureFormat,
         render_resources: &RenderResources,
         render_assets: &RenderAssets,
-        width: u32, height: u32,
+        width: u32,
+        height: u32,
     ) -> Self {
         let shader = device.create_shader_module(wgpu::include_wgsl!("../shaders/shader.wgsl"));
 
-        let depth_texture = Texture::create_depth_texture(device, width, height, "depth_texture");
+        let depth_texture =
+            GpuTexture::create_depth_texture(device, width, height, "depth_texture");
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -65,7 +68,7 @@ impl NaiveRenderer {
                 conservative: false,
             },
             depth_stencil: Some(wgpu::DepthStencilState {
-                format: assets::Texture::DEPTH_FORMAT,
+                format: GpuTexture::DEPTH_FORMAT,
                 depth_write_enabled: Some(true),
                 depth_compare: Some(wgpu::CompareFunction::Less),
                 stencil: wgpu::StencilState::default(),
@@ -132,7 +135,7 @@ impl Renderer for NaiveRenderer {
         render_pass.set_vertex_buffer(0, render_assets.vertex_buffer.slice(..));
         render_pass.set_index_buffer(render_assets.index_buffer.slice(..), INDEX_FORMAT);
 
-        let mut last_mat: Option<Handle<Material>> = None;
+        let mut last_mat: Option<Handle<GpuMaterial>> = None;
         for instance in &world.instances {
             let mesh = render_assets.meshes.get(instance.mesh);
 
@@ -142,6 +145,7 @@ impl Renderer for NaiveRenderer {
                 last_mat = Some(instance.material);
             }
 
+            // instance index is our transform idx
             render_pass.draw_indexed(
                 mesh.first_index..mesh.first_index + mesh.index_count,
                 mesh.base_vertex,
@@ -150,5 +154,10 @@ impl Renderer for NaiveRenderer {
         }
 
         Ok(())
+    }
+
+    fn resize(&mut self, device: &wgpu::Device, width: u32, height: u32) {
+        self.depth_texture =
+            GpuTexture::create_depth_texture(device, width, height, "depth_texture");
     }
 }

@@ -34,7 +34,7 @@ impl Engine {
         log::debug!("world created");
 
         let sponza = assets::gltf_loader::load_gltf("scenes/sponza/Sponza.gltf").await?;
-        let assets = assets::import_gltf(sponza, &gpu, &mut world);
+        let assets = assets::gltf_importer::import_gltf(sponza, &gpu, &mut world);
         log::debug!("sponza imported");
 
         let render_resources = RenderResources::new(&gpu.device, &world);
@@ -146,6 +146,7 @@ impl Engine {
         self.world
             .cam_rig
             .resize(self.gpu.size().x, self.gpu.size().y);
+        self.renderer.resize(&self.gpu.device, width, height);
     }
 
     pub fn frame(&mut self) -> anyhow::Result<()> {

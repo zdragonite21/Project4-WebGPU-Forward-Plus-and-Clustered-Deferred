@@ -24,6 +24,7 @@ var t_texture: texture_2d<f32>;
 @group(2) @binding(1)
 var t_sampler: sampler;
 
+// instance index is our transform idx
 @vertex
 fn vs_main(@builtin(instance_index) idx: u32, vert_in: VertexInput) -> VertexOutput {
     var out: VertexOutput;

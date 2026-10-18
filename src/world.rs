@@ -1,7 +1,7 @@
 use glam::Mat4;
 use std::time::Duration;
 use crate::{
-    assets::{Handle, Material, Mesh}, camera::{CameraRig, CameraSettings}, input::{CursorState, Input},
+    assets::{Handle, material::GpuMaterial, mesh::GpuMesh}, camera::{CameraRig, CameraSettings}, input::{CursorState, Input},
 };
 
 // cpu side state that is updated once per frame
@@ -33,7 +33,7 @@ impl World {
 }
 
 pub struct MeshInstance {
-    pub mesh: Handle<Mesh>,
-    pub material: Handle<Material>,
+    pub mesh: Handle<GpuMesh>,
+    pub material: Handle<GpuMaterial>,
     pub transform: u32,
 }
