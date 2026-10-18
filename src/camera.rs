@@ -20,7 +20,7 @@ impl Default for CameraSettings {
             accel: 200.0,
             damping: 25.0,
             mouse_sens: 0.002,
-            scroll_sens: 0.1,
+            scroll_sens: 0.5,
         }
     }
 }
@@ -34,8 +34,8 @@ pub struct Camera {
 impl Default for Camera {
     fn default() -> Self {
         Self {
-            position: Vec3::new(0.0, 0.0, 15.0),
-            yaw_rad: 0.0,
+            position: Vec3::new(-7.0, 2.0, 0.0),
+            yaw_rad: -FRAC_PI_2,
             pitch_rad: 0.0,
         }
     }
@@ -136,7 +136,7 @@ impl CameraController {
         if cursor.grabbed {
             self.settings.accel = (self.settings.accel
                 - input.mouse_scroll() * self.settings.scroll_sens)
-                .clamp(0.0, 300.0);
+                .clamp(0.0, 500.0);
             let dir = self.movement_vector(camera, input);
             self.velocity += dir * self.settings.accel * dt;
             camera.yaw_rad += -input.mouse_delta().x * self.settings.mouse_sens;
