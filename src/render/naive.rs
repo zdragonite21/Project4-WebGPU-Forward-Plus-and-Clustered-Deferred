@@ -33,7 +33,7 @@ impl NaiveRenderer {
                 bind_group_layouts: &[
                     Some(&render_world.camera.bind_group_layout),
                     Some(&render_world.transforms.bind_group_layout),
-                    &render_assets.material_layout,
+                    Some(&render_assets.material_layout),
                 ],
                 immediate_size: 0,
             });

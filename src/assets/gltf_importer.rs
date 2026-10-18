@@ -21,8 +21,6 @@ const PINK: [u8; 4] = [255, 0, 255, 255];
 pub fn import_gltf(scene: GltfScene, gpu: &Gpu, world: &mut World, assets: &mut RenderAssets) {
     let device = &gpu.device;
 
-    let material_layout = create_material_layout(device);
-
     let image_textures: Vec<Handle<GpuTexture>> = scene
         .images
         .iter()
@@ -43,7 +41,7 @@ pub fn import_gltf(scene: GltfScene, gpu: &Gpu, world: &mut World, assets: &mut 
             let sampler = create_sampler(device, sampler);
             let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("material_bind_group"),
-                layout: &material_layout,
+                layout: &assets.material_layout,
                 entries: &[
                     wgpu::BindGroupEntry {
                         binding: 0,
@@ -77,31 +75,23 @@ pub fn import_gltf(scene: GltfScene, gpu: &Gpu, world: &mut World, assets: &mut 
         })
         .collect();
 
-    let mut vertices = Vec::new();
-    let mut indices = Vec::new();
     let mut submeshes: Vec<(Handle<GpuSubMesh>, Handle<GpuMaterial>)> = Vec::new();
     let mut mesh_ranges: Vec<Range<usize>> = Vec::new();
 
     for gltf_mesh in scene.meshes {
         let start = submeshes.len();
         for prim in gltf_mesh.primitives {
-            let mesh = assets.meshes.add(GpuSubMesh {
-                first_index: indices.len() as u32,
-                index_count: prim.indices.len() as u32,
-                base_vertex: vertices.len() as i32,
-            });
+            let vertices: Vec<Vertex> = prim
+                .positions
+                .iter()
+                .zip(&prim.normals)
+                .zip(&prim.uvs)
+                .map(|((&pos, &nor), &uv)| Vertex { pos, nor, uv })
+                .collect();
+            let mesh = assets.add_mesh(&gpu.queue, &vertices, &prim.indices);
             let material = prim
                 .material
                 .map_or(default_material, |i| material_handles[i]);
-
-            vertices.extend(
-                prim.positions
-                    .iter()
-                    .zip(&prim.normals)
-                    .zip(&prim.uvs)
-                    .map(|((&pos, &nor), &uv)| Vertex { pos, nor, uv }),
-            );
-            indices.extend(prim.indices);
             submeshes.push((mesh, material));
         }
         mesh_ranges.push(start..submeshes.len());
@@ -120,53 +110,12 @@ pub fn import_gltf(scene: GltfScene, gpu: &Gpu, world: &mut World, assets: &mut 
         }
     }
 
-    assets.vertex_buffer = Some(
-        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Scene Vertex Buffer"),
-            contents: bytemuck::cast_slice(&vertices),
-            usage: wgpu::BufferUsages::VERTEX,
-        }),
-    );
-    assets.index_buffer = Some(
-        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Scene Index Buffer"),
-            contents: bytemuck::cast_slice(&indices),
-            usage: wgpu::BufferUsages::INDEX,
-        }),
-    );
-
     log::debug!(
-        "imported glTF: {} vertices, {} indices, {} submeshes, {} materials, {} textures",
-        vertices.len(),
-        indices.len(),
+        "imported glTF: {} submeshes, {} materials, {} textures",
         assets.meshes.items.len(),
         assets.materials.items.len(),
         assets.textures.items.len(),
     );
-}
-
-fn create_material_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-        label: Some("material_bind_group_layout"),
-        entries: &[
-            wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Texture {
-                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                    view_dimension: wgpu::TextureViewDimension::D2,
-                    multisampled: false,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 1,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                count: None,
-            },
-        ],
-    })
 }
 
 fn upload_texture(gpu: &Gpu, image: &GltfImage) -> GpuTexture {

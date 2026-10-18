@@ -33,7 +33,7 @@ impl Engine {
         let mut world = World::new(gpu.size().x, gpu.size().y);
         log::debug!("world created");
 
-        let mut assets = RenderAssets::new();
+        let mut assets = RenderAssets::new(&gpu.device);
 
         let sponza = gltf_loader::load_gltf("scenes/sponza/Sponza.gltf").await?;
         gltf_importer::import_gltf(sponza, &gpu, &mut world, &mut assets);
