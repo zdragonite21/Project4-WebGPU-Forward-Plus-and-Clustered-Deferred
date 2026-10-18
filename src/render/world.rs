@@ -10,6 +10,9 @@ pub struct RenderWorld {
     pub transforms: GpuTransforms,
     pub lights: GpuLights,
     pub globals: GpuGlobals,
+
+    pub scene_bind_group: wgpu::BindGroup,
+    pub scene_bind_group_layout: wgpu::BindGroupLayout,
 }
 
 impl RenderWorld {
@@ -18,11 +21,55 @@ impl RenderWorld {
         let transforms = GpuTransforms::new(device, &world.global_transforms);
         let lights = GpuLights::new(device);
         let globals = GpuGlobals::new(device, world.time);
+
+        let scene_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::COMPUTE | wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: false },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+            ],
+            label: Some("move lights compute bind group layout"),
+        });
+
+        let scene_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &scene_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: lights.buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: globals.buffer.as_entire_binding(),
+                },
+            ],
+            label: Some("move lights compute bind group"),
+        });
+
         Self {
             camera,
             transforms,
             lights,
             globals,
+            scene_bind_group,
+            scene_bind_group_layout
         }
     }
 

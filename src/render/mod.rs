@@ -1,9 +1,7 @@
 use glam::UVec2;
 
 use crate::{
-    render::{assets::RenderAssets, world::RenderWorld},
-    shader_constants::MOVE_LIGHTS_WORKGROUP_SIZE,
-    world::World,
+    render::{assets::RenderAssets, world::RenderWorld}, shader_constants::{BIND_GROUP_SCENE, MOVE_LIGHTS_WORKGROUP_SIZE}, world::World,
 };
 
 pub mod assets;
@@ -26,9 +24,6 @@ pub trait Renderer {
 
 pub struct LightsComputePass {
     pipeline: wgpu::ComputePipeline,
-    bind_group: wgpu::BindGroup,
-    #[allow(unused)]
-    bind_group_layout: wgpu::BindGroupLayout,
 }
 
 impl LightsComputePass {
@@ -38,50 +33,9 @@ impl LightsComputePass {
             source: wgpu::ShaderSource::Wgsl(wesl_core::include_wesl!("move_lights_cs").into()),
         });
 
-        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: false },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                },
-            ],
-            label: Some("move lights compute bind group layout"),
-        });
-
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: world.lights.buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: world.globals.buffer.as_entire_binding(),
-                },
-            ],
-            label: Some("move lights compute bind group"),
-        });
-
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("move lights layout"),
-            bind_group_layouts: &[Some(&bind_group_layout)],
+            bind_group_layouts: &[Some(&world.scene_bind_group_layout)],
             immediate_size: 0,
         });
 
@@ -94,11 +48,7 @@ impl LightsComputePass {
             cache: Default::default(),
         });
 
-        Self {
-            pipeline,
-            bind_group,
-            bind_group_layout,
-        }
+        Self { pipeline }
     }
 
     pub fn dispatch(&mut self, encoder: &mut wgpu::CommandEncoder, world: &RenderWorld) {
@@ -108,7 +58,7 @@ impl LightsComputePass {
         });
 
         pass.set_pipeline(&self.pipeline);
-        pass.set_bind_group(0, &self.bind_group, &[]);
+        pass.set_bind_group(BIND_GROUP_SCENE, &world.scene_bind_group, &[]);
 
         let num_workgroups = world.lights.num_lights.div_ceil(MOVE_LIGHTS_WORKGROUP_SIZE);
         pass.dispatch_workgroups(num_workgroups, 1, 1);

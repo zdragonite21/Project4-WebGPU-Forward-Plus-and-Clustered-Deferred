@@ -1,4 +1,4 @@
-import package::lib::constants::{bind_group_scene, bind_group_model, bind_group_material};
+import package::lib::constants::{bind_group_scene, bind_group_model, bind_group_material, bind_group_transforms};
 import package::lib::core::{CameraUniforms, LightSet, calculate_light_contrib};
 
 struct VertexInput {
@@ -14,18 +14,18 @@ struct FragInput {
     @location(2) uv: vec2f
 }
 
-@group(bind_group_scene) @binding(0)
-var<uniform> camera: CameraUniforms;
+@group(bind_group_scene) @binding(0) var<storage, read_write> light_set: LightSet;
 
 @group(bind_group_model) @binding(0)
+var<uniform> camera: CameraUniforms;
+
+@group(bind_group_transforms) @binding(0)
 var<storage, read> transforms: array<mat4x4<f32>>;
 
 @group(bind_group_material) @binding(0)
 var diffuse_tex: texture_2d<f32>;
 @group(bind_group_material) @binding(1)
 var diffuse_tex_sampler: sampler;
-
-@group(bind_group_scene) @binding(0) var<storage, read_write> light_set: LightSet;
 
 @vertex
 fn vs_main(@builtin(instance_index) trans_idx: u32, in: VertexInput) -> FragInput {

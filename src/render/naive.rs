@@ -1,9 +1,12 @@
 use glam::UVec2;
 
 use crate::{
-    assets::{
-        Handle, material::GpuMaterial, mesh::Vertex, texture::GpuTexture,
-    }, render::{assets::RenderAssets, world::RenderWorld}, world::World,
+    assets::{Handle, material::GpuMaterial, mesh::Vertex, texture::GpuTexture},
+    render::{assets::RenderAssets, world::RenderWorld},
+    shader_constants::{
+        BIND_GROUP_MATERIAL, BIND_GROUP_MODEL, BIND_GROUP_SCENE, BIND_GROUP_TRANSFORMS,
+    },
+    world::World,
 };
 
 use super::Renderer;
@@ -34,6 +37,7 @@ impl NaiveRenderer {
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
                 bind_group_layouts: &[
+                    Some(&render_world.scene_bind_group_layout),
                     Some(&render_world.camera.bind_group_layout),
                     Some(&render_world.transforms.bind_group_layout),
                     Some(&render_assets.material_layout),
@@ -131,11 +135,19 @@ impl Renderer for NaiveRenderer {
         });
 
         render_pass.set_pipeline(&self.pipeline);
-        render_pass.set_bind_group(0, &render_world.camera.bind_group, &[]);
-        render_pass.set_bind_group(1, &render_world.transforms.bind_group, &[]);
+        render_pass.set_bind_group(BIND_GROUP_SCENE, &render_world.scene_bind_group, &[]);
+        render_pass.set_bind_group(BIND_GROUP_MODEL, &render_world.camera.bind_group, &[]);
+        render_pass.set_bind_group(
+            BIND_GROUP_TRANSFORMS,
+            &render_world.transforms.bind_group,
+            &[],
+        );
 
         render_pass.set_vertex_buffer(0, render_assets.vertex_buffer.slice(..));
-        render_pass.set_index_buffer(render_assets.index_buffer.slice(..), RenderAssets::INDEX_FORMAT);
+        render_pass.set_index_buffer(
+            render_assets.index_buffer.slice(..),
+            RenderAssets::INDEX_FORMAT,
+        );
 
         let mut last_mat: Option<Handle<GpuMaterial>> = None;
         for instance in &world.instances {
@@ -143,7 +155,7 @@ impl Renderer for NaiveRenderer {
 
             if Some(instance.material) != last_mat {
                 let mat = render_assets.materials.get(instance.material);
-                render_pass.set_bind_group(2, &mat.bind_group, &[]);
+                render_pass.set_bind_group(BIND_GROUP_MATERIAL, &mat.bind_group, &[]);
                 last_mat = Some(instance.material);
             }
 

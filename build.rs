@@ -34,6 +34,7 @@ fn write_constants() {
     let constants = [
         ("bind_group_scene", format!("{BIND_GROUP_SCENE}u")),
         ("bind_group_model", format!("{BIND_GROUP_MODEL}u")),
+        ("bind_group_transforms", format!("{BIND_GROUP_TRANSFORMS}u")),
         ("bind_group_material", format!("{BIND_GROUP_MATERIAL}u")),
         ("move_lights_workgroup_size", format!("{MOVE_LIGHTS_WORKGROUP_SIZE}u")),
         ("light_radius", format!("{LIGHT_RADIUS:?}f")),
