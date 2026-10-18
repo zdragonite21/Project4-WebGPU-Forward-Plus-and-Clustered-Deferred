@@ -1,9 +1,9 @@
 use crate::{
+    assets::{self, RenderAssets},
     frame_clock::FrameClock,
     gpu::Gpu,
     input::{CursorState, Input},
     render::{Renderer, naive::NaiveRenderer, resources::RenderResources},
-    scene::Scene,
     world::World,
 };
 use std::sync::Arc;
@@ -17,7 +17,7 @@ pub struct Engine {
     pub window: Arc<Window>,
     gpu: Gpu,
     world: World,
-    scene: Scene,
+    assets: RenderAssets,
     render_resources: RenderResources,
     renderer: Box<dyn Renderer>,
     input: Input,
@@ -30,18 +30,20 @@ impl Engine {
         let gpu = Gpu::new(window.clone()).await?;
         log::debug!("gpu context created");
 
-        let world = World::new(gpu.size().x, gpu.size().y);
+        let mut world = World::new(gpu.size().x, gpu.size().y);
         log::debug!("world created");
 
-        let scene = Scene::new(&gpu.device);
-        log::debug!("scene created");
+        let sponza = assets::gltf_loader::load_gltf("scenes/sponza/Sponza.gltf").await?;
+        let assets = assets::import_gltf(sponza, &gpu, &mut world);
+        log::debug!("sponza imported");
 
         let render_resources = RenderResources::new(&gpu.device, &world);
 
         let renderer = Box::new(NaiveRenderer::new(
             &gpu.device,
             gpu.render_format,
-            &render_resources.camera.bind_group_layout,
+            &render_resources,
+            &assets,
         ));
         log::debug!("renderer created");
 
@@ -53,7 +55,7 @@ impl Engine {
             window,
             gpu,
             world,
-            scene,
+            assets,
             render_resources,
             renderer,
             input,
@@ -169,8 +171,9 @@ impl Engine {
         self.renderer.draw(
             &mut encoder,
             &frame.view,
-            &self.render_resources.camera.bind_group,
-            &self.scene,
+            &self.render_resources,
+            &self.world,
+            &self.assets,
         )?;
 
         // finish frame

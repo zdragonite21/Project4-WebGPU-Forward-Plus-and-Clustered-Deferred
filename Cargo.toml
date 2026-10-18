@@ -13,12 +13,17 @@ crate-type = ["cdylib", "rlib"]
 [profile.release]
 strip = true
 
+# image decoding is very slow unoptimized; optimize deps even in debug builds
+[profile.dev.package."*"]
+opt-level = 3
+
 [dependencies]
 anyhow = "1.0.104"
 bytemuck = { version = "1.25", features = ["derive"] }
 env_logger = "0.11.11"
 glam = { version = "0.34", features = ["bytemuck"] }
-gltf = "1.4.1"
+gltf = { version = "1.4.1", default-features = false, features = ["utils", "names"] }
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 instant = "0.1.13"
 log = "0.4.34"
 pollster = "1.0.1"
@@ -30,7 +35,8 @@ console_error_panic_hook = "0.1.6"
 console_log = "1.0"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4.30"
-web-sys = { version = "0.3", features = ["Document", "Window", "Element"] }
+web-sys = { version = "0.3", features = ["Document", "Window", "Element", "Response"] }
+js-sys = "0.3"
 instant = { version = "0.1.13", features = ["wasm-bindgen"] }
 
 [package.metadata.wasm-pack.profile.release]

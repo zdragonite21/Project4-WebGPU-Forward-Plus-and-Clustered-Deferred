@@ -1,4 +1,8 @@
-use crate::scene::{INDEX_FORMAT, Scene, Vertex};
+use crate::{
+    assets::{Handle, INDEX_FORMAT, Material, RenderAssets, gltf_loader::GltfVertex},
+    render::resources::RenderResources,
+    world::World,
+};
 
 use super::Renderer;
 
@@ -10,14 +14,19 @@ impl NaiveRenderer {
     pub fn new(
         device: &wgpu::Device,
         render_format: wgpu::TextureFormat,
-        cam_layout: &wgpu::BindGroupLayout,
+        render_resources: &RenderResources,
+        render_assets: &RenderAssets,
     ) -> Self {
         let shader = device.create_shader_module(wgpu::include_wgsl!("../shaders/shader.wgsl"));
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[Some(&cam_layout)],
+                bind_group_layouts: &[
+                    Some(&render_resources.camera.bind_group_layout),
+                    Some(&render_resources.transforms.bind_group_layout),
+                    Some(&render_assets.material_layout),
+                ],
                 immediate_size: 0,
             });
 
@@ -27,7 +36,7 @@ impl NaiveRenderer {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"),
-                buffers: &[Some(Vertex::desc())],
+                buffers: &[Some(GltfVertex::desc())],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
@@ -68,8 +77,9 @@ impl Renderer for NaiveRenderer {
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
         view: &wgpu::TextureView,
-        cam_bg: &wgpu::BindGroup,
-        scene: &Scene,
+        render_resources: &RenderResources,
+        world: &World,
+        render_assets: &RenderAssets,
     ) -> anyhow::Result<()> {
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Render Pass"),
@@ -94,12 +104,28 @@ impl Renderer for NaiveRenderer {
         });
 
         render_pass.set_pipeline(&self.pipeline);
-        render_pass.set_bind_group(0, cam_bg, &[]);
+        render_pass.set_bind_group(0, &render_resources.camera.bind_group, &[]);
+        render_pass.set_bind_group(1, &render_resources.transforms.bind_group, &[]);
 
-        render_pass.set_vertex_buffer(0, scene.vertex_buffer.slice(..));
-        render_pass.set_index_buffer(scene.index_buffer.slice(..), INDEX_FORMAT);
+        render_pass.set_vertex_buffer(0, render_assets.vertex_buffer.slice(..));
+        render_pass.set_index_buffer(render_assets.index_buffer.slice(..), INDEX_FORMAT);
 
-        render_pass.draw_indexed(0..scene.num_indices, 0, 0..1);
+        let mut last_mat: Option<Handle<Material>> = None;
+        for instance in &world.instances {
+            let mesh = render_assets.meshes.get(instance.mesh);
+
+            if Some(instance.material) != last_mat {
+                let mat = render_assets.materials.get(instance.material);
+                render_pass.set_bind_group(2, &mat.bind_group, &[]);
+                last_mat = Some(instance.material);
+            }
+
+            render_pass.draw_indexed(
+                mesh.first_index..mesh.first_index + mesh.index_count,
+                mesh.base_vertex,
+                instance.transform..instance.transform + 1,
+            );
+        }
 
         Ok(())
     }

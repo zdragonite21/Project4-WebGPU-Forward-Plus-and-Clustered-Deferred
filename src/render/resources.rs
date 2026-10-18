@@ -1,16 +1,21 @@
 use glam::Mat4;
 use wgpu::util::DeviceExt;
 
-use crate::{camera::{Camera, CameraRig, Projection}, world::World};
+use crate::{
+    camera::{Camera, CameraRig, Projection},
+    world::World,
+};
 
 pub struct RenderResources {
     pub camera: CameraGpu,
+    pub transforms: TransformsGpu,
 }
 
 impl RenderResources {
     pub fn new(device: &wgpu::Device, world: &World) -> Self {
         let camera = CameraGpu::new(device, &world.cam_rig);
-        Self { camera }
+        let transforms = TransformsGpu::new(device, &world.transforms);
+        Self { camera, transforms }
     }
 
     pub fn upload(&mut self, queue: &wgpu::Queue, world: &World) {
@@ -88,5 +93,50 @@ impl CameraGpu {
         self.uniform
             .update_view_proj(&cam_rig.camera, &cam_rig.projection);
         queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(&[self.uniform]));
+    }
+}
+
+pub struct TransformsGpu {
+    _buffer: wgpu::Buffer,
+    pub bind_group_layout: wgpu::BindGroupLayout,
+    pub bind_group: wgpu::BindGroup,
+}
+
+impl TransformsGpu {
+    fn new(device: &wgpu::Device, transforms: &Vec<Mat4>) -> Self {
+        let _buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Transforms Buffer"),
+            contents: bytemuck::cast_slice(&transforms),
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: true },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+            label: Some("transforms_bind_group_layout"),
+        });
+
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: _buffer.as_entire_binding(),
+            }],
+            label: Some("transforms_bind_group"),
+        });
+
+        Self {
+            _buffer,
+            bind_group_layout,
+            bind_group,
+        }
     }
 }
