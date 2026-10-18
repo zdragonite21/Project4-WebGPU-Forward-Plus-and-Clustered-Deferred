@@ -27,6 +27,7 @@ image = { version = "0.25", default-features = false, features = ["jpeg", "png"]
 instant = "0.1.13"
 log = "0.4.34"
 pollster = "1.0.1"
+rand = "0.10.3"
 wgpu = "30"
 winit = "0.30.13"
 

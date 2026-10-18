@@ -1,7 +1,7 @@
 use glam::Mat4;
 use std::time::Duration;
 use crate::{
-    assets::{Handle, material::GpuMaterial, mesh::GpuSubMesh}, camera::{CameraRig, CameraSettings}, input::{CursorState, Input},
+    assets::{Handle, material::GpuMaterial, mesh::GpuSubMesh}, camera::{CameraRig, CameraSettings}, frame_clock::FrameClock, input::{CursorState, Input},
 };
 
 // cpu side state that is updated once per frame
@@ -9,6 +9,7 @@ pub struct World {
     pub cam_rig: CameraRig,
     pub instances: Vec<MeshInstance>,
     pub global_transforms: Vec<Mat4>,
+    pub time: f32,
 }
 
 impl World {
@@ -19,6 +20,7 @@ impl World {
             cam_rig,
             instances: Vec::new(),
             global_transforms: Vec::new(),
+            time: 0.0,
         }
     }
 
@@ -26,9 +28,10 @@ impl World {
         &mut self,
         input: &Input,
         cursor: &mut CursorState,
-        dt: Duration,
+        clock: &FrameClock,
     ) {
-        self.cam_rig.update(input, cursor, dt);
+        self.cam_rig.update(input, cursor, clock.dt);
+        self.time = clock.elapsed.as_secs_f32();
     }
 }
 

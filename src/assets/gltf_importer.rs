@@ -140,7 +140,7 @@ fn upload_texture(gpu: &Gpu, image: &GltfImage) -> GpuTexture {
     );
     let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
     GpuTexture {
-        _texture: texture,
+        texture,
         view,
     }
 }

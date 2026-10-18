@@ -163,7 +163,7 @@ impl Engine {
         // frame
         self.frame_clock.tick();
         self.world
-            .update(&self.input, &mut self.cursor, self.frame_clock.dt);
+            .update(&self.input, &mut self.cursor, &self.frame_clock);
         self.render_world.upload(&self.gpu.queue, &self.world);
 
         let mut encoder = self

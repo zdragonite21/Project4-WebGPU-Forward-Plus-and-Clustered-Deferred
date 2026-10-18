@@ -8,9 +8,11 @@ struct VertexInput {
     @location(2) uv: vec2<f32>,
 }
 
-struct VertexOutput {
-    @builtin(position) clip_position: vec4<f32>,
-    @location(0) uv: vec2<f32>,
+struct FragInput {
+    @builtin(position) frag_pos: vec4f,
+    @location(0) pos: vec3f,
+    @location(1) nor: vec3f,
+    @location(2) uv: vec2f
 }
 
 @group(0) @binding(0)
@@ -20,21 +22,25 @@ var<uniform> camera: CameraUniform;
 var<storage, read> transforms: array<mat4x4<f32>>;
 
 @group(2) @binding(0)
-var t_texture: texture_2d<f32>;
+var diffuse_tex: texture_2d<f32>;
 @group(2) @binding(1)
-var t_sampler: sampler;
+var diffuse_tex_sampler: sampler;
 
 @vertex
-fn vs_main(@builtin(instance_index) trans_idx: u32, vert_in: VertexInput) -> VertexOutput {
-    var out: VertexOutput;
-    out.clip_position = camera.view_proj * transforms[trans_idx] * vec4<f32>(vert_in.pos, 1.0);
-    out.uv = vert_in.uv;
+fn vs_main(@builtin(instance_index) trans_idx: u32, in: VertexInput) -> FragInput {
+    let model_pos = transforms[trans_idx] * vec4<f32>(in.pos, 1.0);
+
+    var out: FragInput;
+    out.frag_pos = camera.view_proj * model_pos;
+    out.pos = model_pos.xyz / model_pos.w;
+    out.nor = in.nor;
+    out.uv = in.uv;
     return out;
 }
 
 @fragment
-fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let color = textureSample(t_texture, t_sampler, in.uv);
+fn fs_main(in: FragInput) -> @location(0) vec4<f32> {
+    let color = textureSample(diffuse_tex, diffuse_tex_sampler, in.uv);
     if color.a < 0.5 {
         discard;
     }

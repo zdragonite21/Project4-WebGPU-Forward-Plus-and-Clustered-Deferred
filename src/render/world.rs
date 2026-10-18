@@ -3,23 +3,69 @@ use wgpu::util::DeviceExt;
 
 use crate::{
     camera::{Camera, CameraRig, Projection},
+    frame_clock::FrameClock,
     world::World,
 };
 
 pub struct RenderWorld {
     pub camera: GpuCamera,
     pub transforms: GpuTransforms,
+    pub globals: GpuGlobals,
 }
 
 impl RenderWorld {
     pub fn new(device: &wgpu::Device, world: &World) -> Self {
         let camera = GpuCamera::new(device, &world.cam_rig);
         let transforms = GpuTransforms::new(device, &world.global_transforms);
-        Self { camera, transforms }
+        let globals = GpuGlboals::new(world.time);
+        Self {
+            camera,
+            transforms,
+            globals,
+        }
     }
 
     pub fn upload(&mut self, queue: &wgpu::Queue, world: &World) {
         self.camera.upload(queue, &world.cam_rig);
+        self.globals.upload(queue, world.time);
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+struct GlobalsUniform {
+    time: f32,
+}
+
+impl GlobalsUniform {
+    fn new(time: f32) -> Self {
+        Self { time: time }
+    }
+}
+
+pub struct GpuGlobals {
+    pub buffer: wgpu::Buffer,
+}
+
+impl GpuGlobals {
+    fn new(device: &wgpu::Device, time: f32) -> Self {
+        let uniform = GlobalsUniform::new(time);
+
+        let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Globals Buffer"),
+            contents: bytemuck::cast_slice(&[uniform]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        Self { buffer }
+    }
+
+    fn upload(&mut self, queue: &wgpu::Queue, time: f32) {
+        queue.write_buffer(
+            &self.buffer,
+            0,
+            bytemuck::cast_slice(&[GlobalsUniform::new(time)]),
+        );
     }
 }
 

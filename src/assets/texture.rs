@@ -1,6 +1,7 @@
 
 pub struct GpuTexture {
-    pub _texture: wgpu::Texture,
+    #[allow(unused)]
+    pub texture: wgpu::Texture,
     pub view: wgpu::TextureView,
 }
 
@@ -19,7 +20,7 @@ impl GpuTexture {
             depth_or_array_layers: 1,
         };
 
-        let _texture = device.create_texture(&wgpu::TextureDescriptor {
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some(label),
             size,
             mip_level_count: 1,
@@ -30,8 +31,8 @@ impl GpuTexture {
             view_formats: &[],
         });
 
-        let view = _texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        Self { _texture, view }
+        Self { texture, view }
     }
 }
