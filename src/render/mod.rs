@@ -1,17 +1,20 @@
-use crate::{assets::RenderAssets, render::world::RenderWorld, world::World};
+use glam::UVec2;
+
+use crate::{render::{assets::RenderAssets, world::RenderWorld}, world::World};
 
 pub mod naive;
 pub mod world;
+pub mod assets;
 
 pub trait Renderer {
     fn draw(
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
         view: &wgpu::TextureView,
-        render_resources: &RenderWorld,
+        render_world: &RenderWorld,
         world: &World,
         render_assets: &RenderAssets,
     ) -> anyhow::Result<()>;
 
-    fn resize(&mut self, device: &wgpu::Device, width: u32, height: u32);
+    fn resize(&mut self, device: &wgpu::Device, size: UVec2);
 }

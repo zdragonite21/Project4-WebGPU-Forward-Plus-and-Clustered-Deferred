@@ -5,33 +5,31 @@ use wgpu::util::DeviceExt;
 
 use crate::{
     assets::{
-        Assets, Handle, RenderAssets,
+        Handle,
         gltf_loader::{self, Filter, GltfImage, GltfSampler, GltfScene, Wrap},
         material::GpuMaterial,
-        sub_mesh::{GpuSubMesh, Vertex},
+        mesh::{GpuSubMesh, Vertex},
         texture::GpuTexture,
     },
     gpu::Gpu,
+    render::assets::RenderAssets,
     world::{MeshInstance, World},
 };
 
 const PINK: [u8; 4] = [255, 0, 255, 255];
 
-pub fn import_gltf(scene: GltfScene, gpu: &Gpu, world: &mut World) -> RenderAssets {
+pub fn import_gltf(scene: GltfScene, gpu: &Gpu, world: &mut World, assets: &mut RenderAssets) {
     let device = &gpu.device;
 
     let material_layout = create_material_layout(device);
-    let mut textures = Assets::new();
-    let mut materials = Assets::new();
-    let mut meshes = Assets::new();
 
     let image_textures: Vec<Handle<GpuTexture>> = scene
         .images
         .iter()
-        .map(|image| textures.add(upload_texture(gpu, image)))
+        .map(|image| assets.textures.add(upload_texture(gpu, image)))
         .collect();
 
-    let pink_texture = textures.add(upload_texture(
+    let pink_texture = assets.textures.add(upload_texture(
         gpu,
         &GltfImage {
             width: 1,
@@ -40,30 +38,31 @@ pub fn import_gltf(scene: GltfScene, gpu: &Gpu, world: &mut World) -> RenderAsse
         },
     ));
 
-    let mut make_material = |base_color: Handle<GpuTexture>,
-                             factor: [f32; 4],
-                             sampler: &GltfSampler| {
-        let sampler = create_sampler(device, sampler);
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("material_bind_group"),
-            layout: &material_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&textures.get(base_color).view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&sampler),
-                },
-            ],
-        });
-        materials.add(GpuMaterial {
-            _base_color: base_color,
-            _base_color_factor: Vec4::from_array(factor),
-            bind_group,
-        })
-    };
+    let mut make_material =
+        |base_color: Handle<GpuTexture>, factor: [f32; 4], sampler: &GltfSampler| {
+            let sampler = create_sampler(device, sampler);
+            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("material_bind_group"),
+                layout: &material_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(
+                            &assets.textures.get(base_color).view,
+                        ),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&sampler),
+                    },
+                ],
+            });
+            assets.materials.add(GpuMaterial {
+                _base_color: base_color,
+                _base_color_factor: Vec4::from_array(factor),
+                bind_group,
+            })
+        };
 
     let default_material = make_material(pink_texture, [1.0; 4], &gltf_loader::DEFAULT_SAMPLER);
 
@@ -86,7 +85,7 @@ pub fn import_gltf(scene: GltfScene, gpu: &Gpu, world: &mut World) -> RenderAsse
     for gltf_mesh in scene.meshes {
         let start = submeshes.len();
         for prim in gltf_mesh.primitives {
-            let mesh = meshes.add(GpuSubMesh {
+            let mesh = assets.meshes.add(GpuSubMesh {
                 first_index: indices.len() as u32,
                 index_count: prim.indices.len() as u32,
                 base_vertex: vertices.len() as i32,
@@ -121,34 +120,29 @@ pub fn import_gltf(scene: GltfScene, gpu: &Gpu, world: &mut World) -> RenderAsse
         }
     }
 
-    let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Scene Vertex Buffer"),
-        contents: bytemuck::cast_slice(&vertices),
-        usage: wgpu::BufferUsages::VERTEX,
-    });
-    let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Scene Index Buffer"),
-        contents: bytemuck::cast_slice(&indices),
-        usage: wgpu::BufferUsages::INDEX,
-    });
+    assets.vertex_buffer = Some(
+        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Scene Vertex Buffer"),
+            contents: bytemuck::cast_slice(&vertices),
+            usage: wgpu::BufferUsages::VERTEX,
+        }),
+    );
+    assets.index_buffer = Some(
+        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Scene Index Buffer"),
+            contents: bytemuck::cast_slice(&indices),
+            usage: wgpu::BufferUsages::INDEX,
+        }),
+    );
 
     log::debug!(
         "imported glTF: {} vertices, {} indices, {} submeshes, {} materials, {} textures",
         vertices.len(),
         indices.len(),
-        meshes.items.len(),
-        materials.items.len(),
-        textures.items.len(),
+        assets.meshes.items.len(),
+        assets.materials.items.len(),
+        assets.textures.items.len(),
     );
-
-    RenderAssets {
-        meshes,
-        materials,
-        _textures: textures,
-        material_layout,
-        vertex_buffer,
-        index_buffer,
-    }
 }
 
 fn create_material_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {

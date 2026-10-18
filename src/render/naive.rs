@@ -1,7 +1,9 @@
+use glam::UVec2;
+
 use crate::{
     assets::{
-        Handle, INDEX_FORMAT, RenderAssets, material::GpuMaterial, sub_mesh::Vertex, texture::GpuTexture,
-    }, render::world::RenderWorld, world::World,
+        Handle, material::GpuMaterial, mesh::Vertex, texture::GpuTexture,
+    }, render::{assets::RenderAssets, world::RenderWorld}, world::World,
 };
 
 use super::Renderer;
@@ -15,7 +17,7 @@ impl NaiveRenderer {
     pub fn new(
         device: &wgpu::Device,
         render_format: wgpu::TextureFormat,
-        render_resources: &RenderWorld,
+        render_world: &RenderWorld,
         render_assets: &RenderAssets,
         width: u32,
         height: u32,
@@ -29,9 +31,9 @@ impl NaiveRenderer {
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
                 bind_group_layouts: &[
-                    Some(&render_resources.camera.bind_group_layout),
-                    Some(&render_resources.transforms.bind_group_layout),
-                    Some(&render_assets.material_layout),
+                    Some(&render_world.camera.bind_group_layout),
+                    Some(&render_world.transforms.bind_group_layout),
+                    &render_assets.material_layout,
                 ],
                 immediate_size: 0,
             });
@@ -92,7 +94,7 @@ impl Renderer for NaiveRenderer {
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
         view: &wgpu::TextureView,
-        render_resources: &RenderWorld,
+        render_world: &RenderWorld,
         world: &World,
         render_assets: &RenderAssets,
     ) -> anyhow::Result<()> {
@@ -126,11 +128,11 @@ impl Renderer for NaiveRenderer {
         });
 
         render_pass.set_pipeline(&self.pipeline);
-        render_pass.set_bind_group(0, &render_resources.camera.bind_group, &[]);
-        render_pass.set_bind_group(1, &render_resources.transforms.bind_group, &[]);
+        render_pass.set_bind_group(0, &render_world.camera.bind_group, &[]);
+        render_pass.set_bind_group(1, &render_world.transforms.bind_group, &[]);
 
         render_pass.set_vertex_buffer(0, render_assets.vertex_buffer.slice(..));
-        render_pass.set_index_buffer(render_assets.index_buffer.slice(..), INDEX_FORMAT);
+        render_pass.set_index_buffer(render_assets.index_buffer.slice(..), RenderAssets::INDEX_FORMAT);
 
         let mut last_mat: Option<Handle<GpuMaterial>> = None;
         for instance in &world.instances {
@@ -153,8 +155,8 @@ impl Renderer for NaiveRenderer {
         Ok(())
     }
 
-    fn resize(&mut self, device: &wgpu::Device, width: u32, height: u32) {
+    fn resize(&mut self, device: &wgpu::Device, size: UVec2) {
         self.depth_texture =
-            GpuTexture::create_depth_texture(device, width, height, "depth_texture");
+            GpuTexture::create_depth_texture(device, size.x, size.y, "depth_texture");
     }
 }

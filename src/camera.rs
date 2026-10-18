@@ -1,5 +1,5 @@
 use crate::input::{CursorState, Input};
-use glam::{Mat4, Quat, Vec3, camera};
+use glam::{Mat4, Quat, UVec2, Vec3, camera};
 use instant::Duration;
 use std::f32::consts::FRAC_PI_2;
 use winit::{event::MouseButton, keyboard::KeyCode};
@@ -170,8 +170,8 @@ impl CameraRig {
         }
     }
 
-    pub fn resize(&mut self, width: u32, height: u32) {
-        self.projection.resize(width, height);
+    pub fn resize(&mut self, size: UVec2) {
+        self.projection.resize(size.x, size.y);
     }
 
     pub fn update(&mut self, input: &Input, cursor: &mut CursorState, dt: Duration) {

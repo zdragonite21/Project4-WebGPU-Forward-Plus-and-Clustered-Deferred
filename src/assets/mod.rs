@@ -3,10 +3,8 @@ use std::marker::PhantomData;
 pub mod gltf_importer;
 pub mod gltf_loader;
 pub mod material;
-pub mod sub_mesh;
+pub mod mesh;
 pub mod texture;
-
-use crate::assets::{material::GpuMaterial, sub_mesh::GpuSubMesh, texture::GpuTexture};
 
 pub struct Handle<T> {
     index: usize,
@@ -46,16 +44,4 @@ impl<T> Assets<T> {
     pub fn get(&self, handle: Handle<T>) -> &T {
         &self.items[handle.index]
     }
-}
-
-pub const INDEX_FORMAT: wgpu::IndexFormat = wgpu::IndexFormat::Uint32;
-pub struct RenderAssets {
-    pub meshes: Assets<GpuSubMesh>,
-    pub materials: Assets<GpuMaterial>,
-    pub _textures: Assets<GpuTexture>,
-
-    pub material_layout: wgpu::BindGroupLayout,
-
-    pub vertex_buffer: wgpu::Buffer,
-    pub index_buffer: wgpu::Buffer,
 }

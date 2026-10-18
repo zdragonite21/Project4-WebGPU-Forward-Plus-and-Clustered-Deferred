@@ -1,9 +1,9 @@
 use crate::{
-    assets::{self, RenderAssets},
+    assets::{gltf_importer, gltf_loader},
     frame_clock::FrameClock,
     gpu::Gpu,
     input::{CursorState, Input},
-    render::{Renderer, naive::NaiveRenderer, world::RenderWorld},
+    render::{Renderer, assets::RenderAssets, naive::NaiveRenderer, world::RenderWorld},
     world::World,
 };
 use std::sync::Arc;
@@ -18,7 +18,7 @@ pub struct Engine {
     gpu: Gpu,
     world: World,
     assets: RenderAssets,
-    render_resources: RenderWorld,
+    render_world: RenderWorld,
     renderer: Box<dyn Renderer>,
     input: Input,
     cursor: CursorState,
@@ -33,16 +33,18 @@ impl Engine {
         let mut world = World::new(gpu.size().x, gpu.size().y);
         log::debug!("world created");
 
-        let sponza = assets::gltf_loader::load_gltf("scenes/sponza/Sponza.gltf").await?;
-        let assets = assets::gltf_importer::import_gltf(sponza, &gpu, &mut world);
+        let mut assets = RenderAssets::new();
+
+        let sponza = gltf_loader::load_gltf("scenes/sponza/Sponza.gltf").await?;
+        gltf_importer::import_gltf(sponza, &gpu, &mut world, &mut assets);
         log::debug!("sponza imported");
 
-        let render_resources = RenderWorld::new(&gpu.device, &world);
+        let render_world = RenderWorld::new(&gpu.device, &world);
 
         let renderer = Box::new(NaiveRenderer::new(
             &gpu.device,
             gpu.render_format,
-            &render_resources,
+            &render_world,
             &assets,
             gpu.size().x,
             gpu.size().y,
@@ -58,7 +60,7 @@ impl Engine {
             gpu,
             world,
             assets,
-            render_resources,
+            render_world,
             renderer,
             input,
             cursor,
@@ -143,10 +145,11 @@ impl Engine {
 
     pub fn resize(&mut self, width: u32, height: u32) {
         self.gpu.resize(width, height);
+
         self.world
             .cam_rig
-            .resize(self.gpu.size().x, self.gpu.size().y);
-        self.renderer.resize(&self.gpu.device, width, height);
+            .resize(self.gpu.size());
+        self.renderer.resize(&self.gpu.device, self.gpu.size());
     }
 
     pub fn frame(&mut self) -> anyhow::Result<()> {
@@ -161,7 +164,7 @@ impl Engine {
         self.frame_clock.tick();
         self.world
             .update(&self.input, &mut self.cursor, self.frame_clock.dt);
-        self.render_resources.upload(&self.gpu.queue, &self.world);
+        self.render_world.upload(&self.gpu.queue, &self.world);
 
         let mut encoder = self
             .gpu
@@ -174,7 +177,7 @@ impl Engine {
         self.renderer.draw(
             &mut encoder,
             &frame.view,
-            &self.render_resources,
+            &self.render_world,
             &self.world,
             &self.assets,
         )?;

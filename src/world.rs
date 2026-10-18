@@ -1,7 +1,7 @@
 use glam::Mat4;
 use std::time::Duration;
 use crate::{
-    assets::{Handle, material::GpuMaterial, sub_mesh::GpuSubMesh}, camera::{CameraRig, CameraSettings}, input::{CursorState, Input},
+    assets::{Handle, material::GpuMaterial, mesh::GpuSubMesh}, camera::{CameraRig, CameraSettings}, input::{CursorState, Input},
 };
 
 // cpu side state that is updated once per frame
