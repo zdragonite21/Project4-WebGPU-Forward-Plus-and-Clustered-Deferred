@@ -1,17 +1,20 @@
 use glam::Vec3;
+use wgpu::util::DeviceExt;
 
 #[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable, Default)]
 struct Light {
     pos: [f32; 3],
+    _pad0: f32,
     color: [f32; 3],
+    _pad1: f32,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-struct LightSet {
+struct LightsHeader {
     num_lights: u32,
-    lights: Vec<Light>,
+    _pad: [u32; 3],
 }
 
 pub struct GpuLights {
@@ -30,27 +33,27 @@ fn hue_to_rgb(h: f32) -> Vec3 {
 impl GpuLights {
     pub const NUM_LIGHTS: u32 = 500;
     pub const MAX_NUM_LIGHTS: u32 = 5000;
-    pub const NUM_FLOATS_PER_LIGHT: u32 = 8;
     pub const LIGHT_INTENSITY: f32 = 0.1;
 
-    fn new(device: &wgpu::Device, cam_rig: &CameraRig) -> Self {
-        let lights_array = Vec::new();
+    pub fn new(device: &wgpu::Device) -> Self {
+        let mut lights_array = vec![Light::default(); Self::MAX_NUM_LIGHTS as usize];
 
-        for light_idx in 0..Self::MAX_NUM_LIGHTS {
-            lights_array.push(Light {
-                pos: [0.0; 3],
-                color: (hue_to_rgb(rand::Random()) * Self::LIGHT_INTENSITY).into(),
-            })
+        for light_idx in 0..(Self::MAX_NUM_LIGHTS as usize) {
+            lights_array[light_idx].color =
+                (hue_to_rgb(rand::random()) * Self::LIGHT_INTENSITY).into();
         }
 
-        let light_set = LightSet {
+        let light_set = LightsHeader {
             num_lights: Self::NUM_LIGHTS,
-            lights: lights_array,
+            _pad: [0; 3],
         };
+
+        let mut contents = bytemuck::bytes_of(&light_set).to_vec();
+        contents.extend_from_slice(bytemuck::cast_slice(&lights_array));
 
         let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Lights Buffer"),
-            contents: bytemuck::cast_slice(&[cast_slice(light_set)]),
+            contents: &contents,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
         });
 

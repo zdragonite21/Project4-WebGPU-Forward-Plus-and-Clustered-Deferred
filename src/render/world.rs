@@ -2,14 +2,13 @@ use glam::Mat4;
 use wgpu::util::DeviceExt;
 
 use crate::{
-    camera::{Camera, CameraRig, Projection},
-    frame_clock::FrameClock,
-    world::World,
+    camera::{Camera, CameraRig, Projection}, render::lights::GpuLights, world::World,
 };
 
 pub struct RenderWorld {
     pub camera: GpuCamera,
     pub transforms: GpuTransforms,
+    pub lights: GpuLights,
     pub globals: GpuGlobals,
 }
 
@@ -17,10 +16,12 @@ impl RenderWorld {
     pub fn new(device: &wgpu::Device, world: &World) -> Self {
         let camera = GpuCamera::new(device, &world.cam_rig);
         let transforms = GpuTransforms::new(device, &world.global_transforms);
+        let lights = GpuLights::new(device);
         let globals = GpuGlobals::new(device, world.time);
         Self {
             camera,
             transforms,
+            lights,
             globals,
         }
     }

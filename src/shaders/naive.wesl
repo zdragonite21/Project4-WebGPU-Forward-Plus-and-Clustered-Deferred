@@ -1,5 +1,5 @@
 import package::lib::constants::{bind_group_scene, bind_group_model, bind_group_material};
-import package::lib::core::{CameraUniforms};
+import package::lib::core::{CameraUniforms, LightSet, calculate_light_contrib};
 
 struct VertexInput {
     @location(0) pos: vec3<f32>,
@@ -25,6 +25,8 @@ var diffuse_tex: texture_2d<f32>;
 @group(bind_group_material) @binding(1)
 var diffuse_tex_sampler: sampler;
 
+@group(bind_group_scene) @binding(0) var<storage, read_write> light_set: LightSet;
+
 @vertex
 fn vs_main(@builtin(instance_index) trans_idx: u32, in: VertexInput) -> FragInput {
     let model_pos = transforms[trans_idx] * vec4<f32>(in.pos, 1.0);
@@ -43,5 +45,13 @@ fn fs_main(in: FragInput) -> @location(0) vec4<f32> {
     if color.a < 0.5 {
         discard;
     }
-    return color;
+
+    var contrib = vec3f(0);
+    for (var idx = 0u; idx < light_set.numLights; idx++) {
+        let light = light_set.lights[idx];
+        contrib += calculate_light_contrib(light, in.pos, in.nor);
+    }
+
+    let out_col = color.rgb * contrib;
+    return vec4(out_col, 1);
 }

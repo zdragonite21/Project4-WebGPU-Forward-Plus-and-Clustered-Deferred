@@ -1,10 +1,5 @@
 use crate::{
-    assets::{gltf_importer, gltf_loader},
-    frame_clock::FrameClock,
-    gpu::Gpu,
-    input::{CursorState, Input},
-    render::{Renderer, assets::RenderAssets, naive::NaiveRenderer, world::RenderWorld},
-    world::World,
+    assets::{gltf_importer, gltf_loader}, frame_clock::FrameClock, gpu::Gpu, input::{CursorState, Input}, render::{LightsComputePass, Renderer, assets::RenderAssets, naive::NaiveRenderer, world::RenderWorld}, world::World,
 };
 use std::sync::Arc;
 use winit::{
@@ -20,6 +15,7 @@ pub struct Engine {
     assets: RenderAssets,
     render_world: RenderWorld,
     renderer: Box<dyn Renderer>,
+    lights_pass: LightsComputePass,
     input: Input,
     cursor: CursorState,
     frame_clock: FrameClock,
@@ -51,6 +47,8 @@ impl Engine {
         ));
         log::debug!("renderer created");
 
+        let lights_pass = LightsComputePass::new(&gpu.device, &render_world);
+
         let input = Input::default();
         let cursor = CursorState::default();
         let frame_clock = FrameClock::new();
@@ -62,6 +60,7 @@ impl Engine {
             assets,
             render_world,
             renderer,
+            lights_pass,
             input,
             cursor,
             frame_clock,
@@ -174,6 +173,8 @@ impl Engine {
             });
 
         // render
+        self.lights_pass.dispatch(&mut encoder, &self.render_world);
+
         self.renderer.draw(
             &mut encoder,
             &frame.view,

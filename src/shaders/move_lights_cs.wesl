@@ -59,7 +59,7 @@ fn main(@builtin(global_invocation_id) globalIdx: vec3u) {
         return;
     }
 
-    let scaledTime = time / 5000.f;
+    let scaledTime = time / 5.f;
 
     let noise = perlin3(lightIdx, scaledTime);
     // perlin noise rarely reaches the extremes (-1 and 1), so scale accordingly here to ensure lights reach

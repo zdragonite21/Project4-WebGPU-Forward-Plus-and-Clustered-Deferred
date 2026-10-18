@@ -24,7 +24,7 @@ impl NaiveRenderer {
     ) -> Self {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("naive"),
-            source: wgpu::ShaderSource::Wgsl(wesl::include_wesl!("naive").into()),
+            source: wgpu::ShaderSource::Wgsl(wesl_core::include_wesl!("naive").into()),
         });
 
         let depth_texture =
