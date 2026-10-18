@@ -17,7 +17,7 @@ impl RenderWorld {
     pub fn new(device: &wgpu::Device, world: &World) -> Self {
         let camera = GpuCamera::new(device, &world.cam_rig);
         let transforms = GpuTransforms::new(device, &world.global_transforms);
-        let globals = GpuGlboals::new(world.time);
+        let globals = GpuGlobals::new(device, world.time);
         Self {
             camera,
             transforms,

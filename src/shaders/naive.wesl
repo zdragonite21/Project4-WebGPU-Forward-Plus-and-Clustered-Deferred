@@ -1,6 +1,5 @@
-struct CameraUniform {
-    view_proj: mat4x4<f32>,
-}
+import package::lib::constants::{bind_group_scene, bind_group_model, bind_group_material};
+import package::lib::core::{CameraUniforms};
 
 struct VertexInput {
     @location(0) pos: vec3<f32>,
@@ -15,15 +14,15 @@ struct FragInput {
     @location(2) uv: vec2f
 }
 
-@group(0) @binding(0)
-var<uniform> camera: CameraUniform;
+@group(bind_group_scene) @binding(0)
+var<uniform> camera: CameraUniforms;
 
-@group(1) @binding(0)
+@group(bind_group_model) @binding(0)
 var<storage, read> transforms: array<mat4x4<f32>>;
 
-@group(2) @binding(0)
+@group(bind_group_material) @binding(0)
 var diffuse_tex: texture_2d<f32>;
-@group(2) @binding(1)
+@group(bind_group_material) @binding(1)
 var diffuse_tex_sampler: sampler;
 
 @vertex

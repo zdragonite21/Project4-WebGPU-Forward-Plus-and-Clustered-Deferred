@@ -1,5 +1,8 @@
-@group(${bindGroup_scene}) @binding(0) var<storage, read_write> lightSet: LightSet;
-@group(${bindGroup_scene}) @binding(1) var<uniform> time: f32;
+import package::lib::constants::{bind_group_scene, move_lights_workgroup_size};
+import package::lib::core::{LightSet};
+
+@group(bind_group_scene) @binding(0) var<storage, read_write> lightSet: LightSet;
+@group(bind_group_scene) @binding(1) var<uniform> time: f32;
 
 // https://gist.github.com/munrocket/236ed5ba7e409b8bdf1ff6eca5dcdc39
 // MIT License. © Stefan Gustavson, Munrocket
@@ -49,7 +52,7 @@ const bboxMax = vec3f(10, 8, 5);
 
 // CHECKITOUT: this is an example of a compute shader entry point function
 @compute
-@workgroup_size(${moveLightsWorkgroupSize})
+@workgroup_size(move_lights_workgroup_size)
 fn main(@builtin(global_invocation_id) globalIdx: vec3u) {
     let lightIdx = globalIdx.x;
     if (lightIdx >= lightSet.numLights) {
