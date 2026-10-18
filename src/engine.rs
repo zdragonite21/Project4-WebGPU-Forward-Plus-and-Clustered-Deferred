@@ -44,6 +44,8 @@ impl Engine {
             gpu.render_format,
             &render_resources,
             &assets,
+            gpu.size().x,
+            gpu.size().y,
         ));
         log::debug!("renderer created");
 

@@ -1,5 +1,7 @@
 use crate::{
-    assets::{Handle, INDEX_FORMAT, Material, RenderAssets, gltf_loader::GltfVertex},
+    assets::{
+        self, Handle, INDEX_FORMAT, Material, RenderAssets, Texture, gltf_loader::GltfVertex,
+    },
     render::resources::RenderResources,
     world::World,
 };
@@ -8,6 +10,7 @@ use super::Renderer;
 
 pub struct NaiveRenderer {
     pipeline: wgpu::RenderPipeline,
+    depth_texture: Texture,
 }
 
 impl NaiveRenderer {
@@ -16,8 +19,11 @@ impl NaiveRenderer {
         render_format: wgpu::TextureFormat,
         render_resources: &RenderResources,
         render_assets: &RenderAssets,
+        width: u32, height: u32,
     ) -> Self {
         let shader = device.create_shader_module(wgpu::include_wgsl!("../shaders/shader.wgsl"));
+
+        let depth_texture = Texture::create_depth_texture(device, width, height, "depth_texture");
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -58,7 +64,13 @@ impl NaiveRenderer {
                 unclipped_depth: false,
                 conservative: false,
             },
-            depth_stencil: None,
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: assets::Texture::DEPTH_FORMAT,
+                depth_write_enabled: Some(true),
+                depth_compare: Some(wgpu::CompareFunction::Less),
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
             multisample: wgpu::MultisampleState {
                 count: 1,
                 mask: !0,
@@ -68,7 +80,10 @@ impl NaiveRenderer {
             cache: None,
         });
 
-        Self { pipeline }
+        Self {
+            pipeline,
+            depth_texture,
+        }
     }
 }
 
@@ -97,7 +112,14 @@ impl Renderer for NaiveRenderer {
                     store: wgpu::StoreOp::Store,
                 },
             })],
-            depth_stencil_attachment: None,
+            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                view: &self.depth_texture.view,
+                depth_ops: Some(wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(1.0),
+                    store: wgpu::StoreOp::Store,
+                }),
+                stencil_ops: None,
+            }),
             occlusion_query_set: None,
             timestamp_writes: None,
             multiview_mask: None,

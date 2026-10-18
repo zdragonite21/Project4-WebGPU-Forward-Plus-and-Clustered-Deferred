@@ -26,7 +26,7 @@ impl<T> PartialEq for Handle<T> {
     fn eq(&self, other: &Self) -> bool {
         self.index == other.index
     }
-} 
+}
 impl<T> Eq for Handle<T> {}
 
 pub struct Assets<T> {
@@ -60,6 +60,38 @@ pub struct Mesh {
 pub struct Texture {
     pub texture: wgpu::Texture,
     pub view: wgpu::TextureView,
+}
+
+impl Texture {
+    pub const DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth32Float;
+
+    pub fn create_depth_texture(
+        device: &wgpu::Device,
+        width: u32,
+        height: u32,
+        label: &str,
+    ) -> Self {
+        let size = wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        };
+
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some(label),
+            size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: Self::DEPTH_FORMAT,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        Self { texture, view }
+    }
 }
 
 pub struct Material {
@@ -105,7 +137,9 @@ pub fn import_gltf(scene: GltfScene, gpu: &Gpu, world: &mut World) -> RenderAsse
         },
     ));
 
-    let mut make_material = |base_color: Handle<Texture>, factor: [f32; 4], sampler: &GltfSampler| {
+    let mut make_material = |base_color: Handle<Texture>,
+                             factor: [f32; 4],
+                             sampler: &GltfSampler| {
         let sampler = create_sampler(device, sampler);
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("material_bind_group"),
@@ -134,7 +168,9 @@ pub fn import_gltf(scene: GltfScene, gpu: &Gpu, world: &mut World) -> RenderAsse
         .materials
         .iter()
         .map(|m| {
-            let texture = m.base_color_image.map_or(pink_texture, |i| image_textures[i]);
+            let texture = m
+                .base_color_image
+                .map_or(pink_texture, |i| image_textures[i]);
             make_material(texture, m.base_color_factor, &m.sampler)
         })
         .collect();
@@ -152,7 +188,9 @@ pub fn import_gltf(scene: GltfScene, gpu: &Gpu, world: &mut World) -> RenderAsse
                 index_count: prim.indices.len() as u32,
                 base_vertex: vertices.len() as i32,
             });
-            let material = prim.material.map_or(default_material, |i| material_handles[i]);
+            let material = prim
+                .material
+                .map_or(default_material, |i| material_handles[i]);
 
             vertices.extend(prim.vertices);
             indices.extend(prim.indices);
@@ -160,7 +198,6 @@ pub fn import_gltf(scene: GltfScene, gpu: &Gpu, world: &mut World) -> RenderAsse
         }
         mesh_ranges.push(start..submeshes.len());
     }
-
 
     for gltf_instance in scene.instances {
         let transform = world.transforms.len() as u32;
