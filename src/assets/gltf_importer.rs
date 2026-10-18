@@ -3,10 +3,17 @@ use std::ops::Range;
 use glam::Vec4;
 use wgpu::util::DeviceExt;
 
-use crate::{assets::{Assets, Handle, RenderAssets, gltf_loader::{self, Filter, GltfImage, GltfSampler, GltfScene, Wrap}, material::GpuMaterial, mesh::GpuMesh, texture::GpuTexture}, gpu::Gpu, world::{MeshInstance, World}};
-
-
-
+use crate::{
+    assets::{
+        Assets, Handle, RenderAssets,
+        gltf_loader::{self, Filter, GltfImage, GltfSampler, GltfScene, Wrap},
+        material::GpuMaterial,
+        sub_mesh::{GpuSubMesh, Vertex},
+        texture::GpuTexture,
+    },
+    gpu::Gpu,
+    world::{MeshInstance, World},
+};
 
 const PINK: [u8; 4] = [255, 0, 255, 255];
 
@@ -73,13 +80,13 @@ pub fn import_gltf(scene: GltfScene, gpu: &Gpu, world: &mut World) -> RenderAsse
 
     let mut vertices = Vec::new();
     let mut indices = Vec::new();
-    let mut submeshes: Vec<(Handle<GpuMesh>, Handle<GpuMaterial>)> = Vec::new();
+    let mut submeshes: Vec<(Handle<GpuSubMesh>, Handle<GpuMaterial>)> = Vec::new();
     let mut mesh_ranges: Vec<Range<usize>> = Vec::new();
 
     for gltf_mesh in scene.meshes {
         let start = submeshes.len();
         for prim in gltf_mesh.primitives {
-            let mesh = meshes.add(GpuMesh {
+            let mesh = meshes.add(GpuSubMesh {
                 first_index: indices.len() as u32,
                 index_count: prim.indices.len() as u32,
                 base_vertex: vertices.len() as i32,
@@ -88,7 +95,13 @@ pub fn import_gltf(scene: GltfScene, gpu: &Gpu, world: &mut World) -> RenderAsse
                 .material
                 .map_or(default_material, |i| material_handles[i]);
 
-            vertices.extend(prim.vertices);
+            vertices.extend(
+                prim.positions
+                    .iter()
+                    .zip(&prim.normals)
+                    .zip(&prim.uvs)
+                    .map(|((&pos, &nor), &uv)| Vertex { pos, nor, uv }),
+            );
             indices.extend(prim.indices);
             submeshes.push((mesh, material));
         }
@@ -96,8 +109,8 @@ pub fn import_gltf(scene: GltfScene, gpu: &Gpu, world: &mut World) -> RenderAsse
     }
 
     for gltf_instance in scene.instances {
-        let transform = world.transforms.len() as u32;
-        world.transforms.push(gltf_instance.world_transform);
+        let transform = world.global_transforms.len() as u32;
+        world.global_transforms.push(gltf_instance.world_transform);
 
         for &(mesh, material) in &submeshes[mesh_ranges[gltf_instance.mesh].clone()] {
             world.instances.push(MeshInstance {
@@ -183,7 +196,10 @@ fn upload_texture(gpu: &Gpu, image: &GltfImage) -> GpuTexture {
         &image.rgba8,
     );
     let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-    GpuTexture { _texture: texture, view }
+    GpuTexture {
+        _texture: texture,
+        view,
+    }
 }
 
 fn create_sampler(device: &wgpu::Device, s: &GltfSampler) -> wgpu::Sampler {

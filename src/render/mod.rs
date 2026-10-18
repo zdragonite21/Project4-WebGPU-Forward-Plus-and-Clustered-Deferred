@@ -1,14 +1,14 @@
-use crate::{assets::RenderAssets, render::resources::RenderResources, world::World};
+use crate::{assets::RenderAssets, render::world::RenderWorld, world::World};
 
 pub mod naive;
-pub mod resources;
+pub mod world;
 
 pub trait Renderer {
     fn draw(
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
         view: &wgpu::TextureView,
-        render_resources: &RenderResources,
+        render_resources: &RenderWorld,
         world: &World,
         render_assets: &RenderAssets,
     ) -> anyhow::Result<()>;

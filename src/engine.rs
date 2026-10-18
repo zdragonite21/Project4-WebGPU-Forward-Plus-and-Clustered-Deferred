@@ -3,7 +3,7 @@ use crate::{
     frame_clock::FrameClock,
     gpu::Gpu,
     input::{CursorState, Input},
-    render::{Renderer, naive::NaiveRenderer, resources::RenderResources},
+    render::{Renderer, naive::NaiveRenderer, world::RenderWorld},
     world::World,
 };
 use std::sync::Arc;
@@ -18,7 +18,7 @@ pub struct Engine {
     gpu: Gpu,
     world: World,
     assets: RenderAssets,
-    render_resources: RenderResources,
+    render_resources: RenderWorld,
     renderer: Box<dyn Renderer>,
     input: Input,
     cursor: CursorState,
@@ -37,7 +37,7 @@ impl Engine {
         let assets = assets::gltf_importer::import_gltf(sponza, &gpu, &mut world);
         log::debug!("sponza imported");
 
-        let render_resources = RenderResources::new(&gpu.device, &world);
+        let render_resources = RenderWorld::new(&gpu.device, &world);
 
         let renderer = Box::new(NaiveRenderer::new(
             &gpu.device,

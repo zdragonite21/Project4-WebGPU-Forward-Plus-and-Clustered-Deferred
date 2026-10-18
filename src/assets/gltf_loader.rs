@@ -7,30 +7,10 @@
 use anyhow::{Context, anyhow, bail};
 use glam::Mat4;
 
-/// Interleaved vertex matching the shared layout: pos @0, nor @12, uv @24, stride 32.
-#[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct GltfVertex {
-    pub pos: [f32; 3],
-    pub nor: [f32; 3],
-    pub uv: [f32; 2],
-}
-
-impl GltfVertex {
-    const ATTRIBS: [wgpu::VertexAttribute; 3] =
-        wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3, 2 => Float32x2];
-
-    pub fn desc() -> wgpu::VertexBufferLayout<'static> {
-        wgpu::VertexBufferLayout {
-            array_stride: std::mem::size_of::<Self>() as wgpu::BufferAddress,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &Self::ATTRIBS,
-        }
-    }
-}
-
 pub struct GltfPrimitive {
-    pub vertices: Vec<GltfVertex>,
+    pub positions: Vec<[f32; 3]>,
+    pub normals: Vec<[f32; 3]>,
+    pub uvs: Vec<[f32; 2]>,
     /// Always u32; u8/u16 indices are widened.
     pub indices: Vec<u32>,
     /// Index into `GltfScene::materials`; `None` means the glTF default material.
@@ -194,21 +174,15 @@ fn read_mesh(mesh: &gltf::Mesh, buffers: &[Vec<u8>]) -> anyhow::Result<GltfMesh>
             uvs = None;
         }
 
-        let vertices = (0..positions.len())
-            .map(|i| GltfVertex {
-                pos: positions[i],
-                nor: normals.as_ref().map_or([0.0; 3], |n| n[i]),
-                uv: uvs.as_ref().map_or([0.0; 2], |u| u[i]),
-            })
-            .collect();
-
         let indices = match reader.read_indices() {
             Some(indices) => indices.into_u32().collect(),
             None => (0..positions.len() as u32).collect(),
         };
 
         primitives.push(GltfPrimitive {
-            vertices,
+            normals: normals.unwrap_or_else(|| vec![[0.0; 3]; positions.len()]),
+            uvs: uvs.unwrap_or_else(|| vec![[0.0; 2]; positions.len()]),
+            positions,
             indices,
             material: primitive.material().index(),
         });

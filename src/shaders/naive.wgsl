@@ -24,11 +24,10 @@ var t_texture: texture_2d<f32>;
 @group(2) @binding(1)
 var t_sampler: sampler;
 
-// instance index is our transform idx
 @vertex
-fn vs_main(@builtin(instance_index) idx: u32, vert_in: VertexInput) -> VertexOutput {
+fn vs_main(@builtin(instance_index) trans_idx: u32, vert_in: VertexInput) -> VertexOutput {
     var out: VertexOutput;
-    out.clip_position = camera.view_proj * transforms[idx] * vec4<f32>(vert_in.pos, 1.0);
+    out.clip_position = camera.view_proj * transforms[trans_idx] * vec4<f32>(vert_in.pos, 1.0);
     out.uv = vert_in.uv;
     return out;
 }

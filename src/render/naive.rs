@@ -1,10 +1,7 @@
 use crate::{
     assets::{
-        Handle, INDEX_FORMAT, RenderAssets, gltf_loader::GltfVertex, material::GpuMaterial,
-        texture::GpuTexture,
-    },
-    render::resources::RenderResources,
-    world::World,
+        Handle, INDEX_FORMAT, RenderAssets, material::GpuMaterial, sub_mesh::Vertex, texture::GpuTexture,
+    }, render::world::RenderWorld, world::World,
 };
 
 use super::Renderer;
@@ -18,12 +15,12 @@ impl NaiveRenderer {
     pub fn new(
         device: &wgpu::Device,
         render_format: wgpu::TextureFormat,
-        render_resources: &RenderResources,
+        render_resources: &RenderWorld,
         render_assets: &RenderAssets,
         width: u32,
         height: u32,
     ) -> Self {
-        let shader = device.create_shader_module(wgpu::include_wgsl!("../shaders/shader.wgsl"));
+        let shader = device.create_shader_module(wgpu::include_wgsl!("../shaders/naive.wgsl"));
 
         let depth_texture =
             GpuTexture::create_depth_texture(device, width, height, "depth_texture");
@@ -45,7 +42,7 @@ impl NaiveRenderer {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"),
-                buffers: &[Some(GltfVertex::desc())],
+                buffers: &[Some(Vertex::desc())],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
@@ -95,7 +92,7 @@ impl Renderer for NaiveRenderer {
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
         view: &wgpu::TextureView,
-        render_resources: &RenderResources,
+        render_resources: &RenderWorld,
         world: &World,
         render_assets: &RenderAssets,
     ) -> anyhow::Result<()> {

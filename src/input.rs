@@ -1,4 +1,3 @@
-#![allow(unused)]
 use glam::Vec2;
 use std::collections::HashSet;
 use std::hash::Hash;
@@ -62,6 +61,7 @@ pub struct Input {
     scroll_delta: f32,
 }
 
+#[allow(unused)]
 impl Input {
     pub fn on_key(&mut self, key: KeyCode, pressed: bool, repeat: bool) {
         if repeat {

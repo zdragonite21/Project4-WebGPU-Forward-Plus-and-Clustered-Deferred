@@ -6,15 +6,15 @@ use crate::{
     world::World,
 };
 
-pub struct RenderResources {
-    pub camera: CameraGpu,
-    pub transforms: TransformsGpu,
+pub struct RenderWorld {
+    pub camera: GpuCamera,
+    pub transforms: GpuTransforms,
 }
 
-impl RenderResources {
+impl RenderWorld {
     pub fn new(device: &wgpu::Device, world: &World) -> Self {
-        let camera = CameraGpu::new(device, &world.cam_rig);
-        let transforms = TransformsGpu::new(device, &world.transforms);
+        let camera = GpuCamera::new(device, &world.cam_rig);
+        let transforms = GpuTransforms::new(device, &world.global_transforms);
         Self { camera, transforms }
     }
 
@@ -35,20 +35,15 @@ impl CameraUniform {
             view_proj: projection.proj_matrix() * camera.view_matrix(),
         }
     }
-
-    fn update_view_proj(&mut self, camera: &Camera, projection: &Projection) {
-        self.view_proj = projection.proj_matrix() * camera.view_matrix();
-    }
 }
 
-pub struct CameraGpu {
-    uniform: CameraUniform,
+pub struct GpuCamera {
     buffer: wgpu::Buffer,
     pub bind_group_layout: wgpu::BindGroupLayout,
     pub bind_group: wgpu::BindGroup,
 }
 
-impl CameraGpu {
+impl GpuCamera {
     fn new(device: &wgpu::Device, cam_rig: &CameraRig) -> Self {
         let uniform = CameraUniform::new(&cam_rig.camera, &cam_rig.projection);
 
@@ -82,7 +77,6 @@ impl CameraGpu {
         });
 
         Self {
-            uniform,
             buffer,
             bind_group_layout,
             bind_group,
@@ -90,19 +84,21 @@ impl CameraGpu {
     }
 
     fn upload(&mut self, queue: &wgpu::Queue, cam_rig: &CameraRig) {
-        self.uniform
-            .update_view_proj(&cam_rig.camera, &cam_rig.projection);
-        queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(&[self.uniform]));
+        queue.write_buffer(
+            &self.buffer,
+            0,
+            bytemuck::cast_slice(&[CameraUniform::new(&cam_rig.camera, &cam_rig.projection)]),
+        );
     }
 }
 
-pub struct TransformsGpu {
+pub struct GpuTransforms {
     _buffer: wgpu::Buffer,
     pub bind_group_layout: wgpu::BindGroupLayout,
     pub bind_group: wgpu::BindGroup,
 }
 
-impl TransformsGpu {
+impl GpuTransforms {
     fn new(device: &wgpu::Device, transforms: &Vec<Mat4>) -> Self {
         let _buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Transforms Buffer"),
