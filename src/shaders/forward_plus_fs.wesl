@@ -1,4 +1,9 @@
-import package::lib::constants::{bind_group_scene, bind_group_model, bind_group_material, bind_group_transforms};
+import package::lib::constants::{
+    bind_group_material,
+    bind_group_model,
+    bind_group_scene,
+    bind_group_transforms
+};
 import package::lib::core::{CameraUniforms, LightSet, calculate_light_contrib};
 
 struct VertexInput {
@@ -11,10 +16,11 @@ struct FragInput {
     @builtin(position) frag_pos: vec4f,
     @location(0) pos: vec3f,
     @location(1) nor: vec3f,
-    @location(2) uv: vec2f
+    @location(2) uv: vec2f,
 }
 
-@group(bind_group_scene) @binding(0) var<storage, read_write> light_set: LightSet;
+@group(bind_group_scene) @binding(0)
+var<storage, read_write> light_set: LightSet;
 
 @group(bind_group_model) @binding(0)
 var<uniform> camera: CameraUniforms;
@@ -32,9 +38,9 @@ fn vs_main(@builtin(instance_index) trans_idx: u32, in: VertexInput) -> FragInpu
     let model_pos = transforms[trans_idx] * vec4<f32>(in.pos, 1.0);
 
     var out: FragInput;
-    out.frag_pos = camera.view_proj * model_pos;
+    out.frag_pos = camera.proj * camera.view * model_pos;
     out.pos = model_pos.xyz / model_pos.w;
-    out.nor = in.nor;
+    out.nor = normalize(in.nor);
     out.uv = in.uv;
     return out;
 }
@@ -47,7 +53,7 @@ fn fs_main(in: FragInput) -> @location(0) vec4<f32> {
     }
 
     var contrib = vec3f(0);
-    for (var idx = 0u; idx < light_set.numLights; idx++) {
+    for(var idx = 0u; idx < light_set.numLights; idx++) {
         let light = light_set.lights[idx];
         contrib += calculate_light_contrib(light, in.pos, in.nor);
     }

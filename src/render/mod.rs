@@ -6,8 +6,9 @@ use crate::{
 
 pub mod assets;
 pub mod lights;
-pub mod naive;
 pub mod world;
+pub mod naive;
+pub mod forward_plus;
 
 pub trait Renderer {
     fn draw(

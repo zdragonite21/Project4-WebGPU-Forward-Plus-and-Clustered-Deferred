@@ -25,9 +25,14 @@ impl NaiveRenderer {
         width: u32,
         height: u32,
     ) -> Self {
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("naive"),
-            source: wgpu::ShaderSource::Wgsl(wesl_core::include_wesl!("naive").into()),
+        let shader_vs = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("naive_vs"),
+            source: wgpu::ShaderSource::Wgsl(wesl_core::include_wesl!("naive_vs").into()),
+        });
+
+        let shader_fs = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("naive_fs"),
+            source: wgpu::ShaderSource::Wgsl(wesl_core::include_wesl!("naive_fs").into()),
         });
 
         let depth_texture =
@@ -49,13 +54,13 @@ impl NaiveRenderer {
             label: Some("Render Pipeline"),
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
-                module: &shader,
+                module: &shader_vs,
                 entry_point: Some("vs_main"),
                 buffers: &[Some(Vertex::desc())],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
-                module: &shader,
+                module: &shader_fs,
                 entry_point: Some("fs_main"),
                 targets: &[Some(wgpu::ColorTargetState {
                     format: render_format,
@@ -68,7 +73,7 @@ impl NaiveRenderer {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
-                cull_mode: Some(wgpu::Face::Back),
+                cull_mode: None,
                 polygon_mode: wgpu::PolygonMode::Fill,
                 unclipped_depth: false,
                 conservative: false,

@@ -120,13 +120,15 @@ impl GpuGlobals {
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct CameraUniform {
-    view_proj: Mat4,
+    view: Mat4,
+    proj: Mat4,
 }
 
 impl CameraUniform {
     fn new(camera: &Camera, projection: &Projection) -> Self {
         Self {
-            view_proj: projection.proj_matrix() * camera.view_matrix(),
+            view: camera.view_matrix(),
+            proj: projection.proj_matrix(),
         }
     }
 }
