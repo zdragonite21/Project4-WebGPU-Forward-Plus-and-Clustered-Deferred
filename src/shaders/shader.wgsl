@@ -35,5 +35,8 @@ fn vs_main(@builtin(instance_index) idx: u32, vert_in: VertexInput) -> VertexOut
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let color = textureSample(t_texture, t_sampler, in.uv);
+    if color.a < 0.5 {
+        discard;
+    }
     return color;
 }
