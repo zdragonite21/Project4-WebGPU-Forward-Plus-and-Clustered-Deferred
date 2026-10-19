@@ -15,8 +15,8 @@ impl GpuTexture {
         label: &str,
     ) -> Self {
         let size = wgpu::Extent3d {
-            width,
-            height,
+            width: width.max(1),
+            height: height.max(1),
             depth_or_array_layers: 1,
         };
 

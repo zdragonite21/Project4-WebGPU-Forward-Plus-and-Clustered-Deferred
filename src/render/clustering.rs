@@ -98,6 +98,7 @@ impl GpuClusters {
 pub struct ClusteringComputePass {
     cluster_bounds: wgpu::ComputePipeline,
     assign_lights: wgpu::ComputePipeline,
+    empty_bind_group: wgpu::BindGroup,
     pub resources: GpuClusters,
 }
 
@@ -112,6 +113,11 @@ impl ClusteringComputePass {
 
         let empty_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("empty"),
+            entries: &[],
+        });
+        let empty_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("empty"),
+            layout: &empty_layout,
             entries: &[],
         });
 
@@ -147,6 +153,7 @@ impl ClusteringComputePass {
         Self {
             cluster_bounds,
             assign_lights,
+            empty_bind_group,
             resources,
         }
     }
@@ -160,6 +167,8 @@ impl ClusteringComputePass {
             pass.set_pipeline(&self.cluster_bounds);
             pass.set_bind_group(BIND_GROUP_CLUSTERING, &self.resources.bind_group, &[]);
             pass.set_bind_group(BIND_GROUP_SCENE, &world.scene_bind_group, &[]);
+            pass.set_bind_group(1, &self.empty_bind_group, &[]);
+            pass.set_bind_group(2, &self.empty_bind_group, &[]);
 
             let nwg = (UVec3::from(CLUSTER_XYZ) + UVec3::from(CLUSTER_WG_SIZE) - 1)
                 / UVec3::from(CLUSTER_WG_SIZE);
@@ -174,6 +183,8 @@ impl ClusteringComputePass {
             pass.set_pipeline(&self.assign_lights);
             pass.set_bind_group(BIND_GROUP_CLUSTERING, &self.resources.bind_group, &[]);
             pass.set_bind_group(BIND_GROUP_SCENE, &world.scene_bind_group, &[]);
+            pass.set_bind_group(1, &self.empty_bind_group, &[]);
+            pass.set_bind_group(2, &self.empty_bind_group, &[]);
 
             let nwg = (UVec3::from(CLUSTER_XYZ) + UVec3::from(CLUSTER_WG_SIZE) - 1)
                 / UVec3::from(CLUSTER_WG_SIZE);
