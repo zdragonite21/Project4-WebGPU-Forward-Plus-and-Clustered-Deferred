@@ -39,7 +39,7 @@ fn fs_main(in: FragInput) -> @location(0) vec4<f32> {
     let slice_z = depth_to_slice(d, camera.near, camera.far, f32(cluster_xyz.z));
 
     let clip = camera.proj * view;
-    let ndc = (clip.xyz / clip.w).xy;
+    let ndc = clip.xy / clip.w;
 
 
     let cluster_idx = ndc_to_cluster_idx(ndc, slice_z);

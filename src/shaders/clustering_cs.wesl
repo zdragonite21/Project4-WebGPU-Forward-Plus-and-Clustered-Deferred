@@ -55,8 +55,8 @@ fn ndc_to_view(ndc: vec2f, d: f32) -> vec3f {
     return p;
 }
 
-fn set_bounds(bounds: Aabb, ndc: vec2f, z: f32) -> Aabb {
-    var p = ndc_to_view(ndc, z);
+fn set_bounds(bounds: Aabb, ndc: vec2f, d: f32) -> Aabb {
+    var p = ndc_to_view(ndc, d);
     return Aabb(min(bounds.min, p), max(bounds.max, p));
 }
 

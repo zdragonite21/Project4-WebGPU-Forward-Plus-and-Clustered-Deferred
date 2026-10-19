@@ -110,12 +110,17 @@ impl ClusteringComputePass {
 
         let resources = GpuClusters::new(device);
 
+        let empty_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("empty"),
+            entries: &[],
+        });
+
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("cluster layout"),
             bind_group_layouts: &[
                 Some(&world.scene_bind_group_layout),
-                None,
-                None,
+                Some(&empty_layout),
+                Some(&empty_layout),
                 Some(&resources.bind_group_layout),
             ],
             immediate_size: 0,
