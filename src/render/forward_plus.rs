@@ -46,7 +46,6 @@ impl ForwardPlusRenderer {
                 label: Some("Render Pipeline Layout"),
                 bind_group_layouts: &[
                     Some(&render_world.scene_bind_group_layout),
-                    Some(&render_world.camera.bind_group_layout),
                     Some(&render_world.transforms.bind_group_layout),
                     Some(&render_assets.material_layout),
                     Some(&cluster_pass.resources.bind_group_layout),
@@ -144,7 +143,6 @@ impl ForwardPlusRenderer {
 
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(BIND_GROUP_SCENE, &render_world.scene_bind_group, &[]);
-        render_pass.set_bind_group(BIND_GROUP_SCENE, &render_world.camera.bind_group, &[]);
         render_pass.set_bind_group(
             BIND_GROUP_CLUSTERING,
             &self.cluster_pass.resources.bind_group,

@@ -29,6 +29,18 @@ impl RenderWorld {
                 entries: &[
                     wgpu::BindGroupLayoutEntry {
                         binding: 0,
+                        visibility: wgpu::ShaderStages::VERTEX
+                            | wgpu::ShaderStages::FRAGMENT
+                            | wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
                         visibility: wgpu::ShaderStages::COMPUTE | wgpu::ShaderStages::FRAGMENT,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Storage { read_only: false },
@@ -38,7 +50,7 @@ impl RenderWorld {
                         count: None,
                     },
                     wgpu::BindGroupLayoutEntry {
-                        binding: 1,
+                        binding: 2,
                         visibility: wgpu::ShaderStages::COMPUTE,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Uniform,
@@ -48,7 +60,7 @@ impl RenderWorld {
                         count: None,
                     },
                 ],
-                label: Some("move lights compute bind group layout"),
+                label: Some("scene_bind_group_layout"),
             });
 
         let scene_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -56,14 +68,18 @@ impl RenderWorld {
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: lights.buffer.as_entire_binding(),
+                    resource: camera.buffer.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
+                    resource: lights.buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
                     resource: globals.buffer.as_entire_binding(),
                 },
             ],
-            label: Some("move lights compute bind group"),
+            label: Some("scene_bind_group"),
         });
 
         Self {
@@ -139,9 +155,7 @@ impl CameraUniform {
 }
 
 pub struct GpuCamera {
-    buffer: wgpu::Buffer,
-    pub bind_group_layout: wgpu::BindGroupLayout,
-    pub bind_group: wgpu::BindGroup,
+    pub buffer: wgpu::Buffer,
 }
 
 impl GpuCamera {
@@ -154,34 +168,7 @@ impl GpuCamera {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
-        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            }],
-            label: Some("camera_bind_group_layout"),
-        });
-
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: buffer.as_entire_binding(),
-            }],
-            label: Some("camera_bind_group"),
-        });
-
-        Self {
-            buffer,
-            bind_group_layout,
-            bind_group,
-        }
+        Self { buffer }
     }
 
     fn upload(&mut self, queue: &wgpu::Queue, cam_rig: &CameraRig) {

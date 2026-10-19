@@ -12,7 +12,9 @@ use crate::{
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct Cluster {
     min: [f32; 3],
+    _pad0: f32,
     max: [f32; 3],
+    _pad1: f32,
 }
 
 #[repr(C)]
@@ -112,7 +114,8 @@ impl ClusteringComputePass {
             label: Some("cluster layout"),
             bind_group_layouts: &[
                 Some(&world.scene_bind_group_layout),
-                Some(&world.camera.bind_group_layout),
+                None,
+                None,
                 Some(&resources.bind_group_layout),
             ],
             immediate_size: 0,
@@ -128,10 +131,10 @@ impl ClusteringComputePass {
         });
 
         let assign_lights = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("assign lightss"),
+            label: Some("assign lights"),
             layout: Some(&pipeline_layout),
             module: &shader,
-            entry_point: Some("cluster_bounds"),
+            entry_point: Some("assign_lights"),
             compilation_options: Default::default(),
             cache: Default::default(),
         });
@@ -151,7 +154,6 @@ impl ClusteringComputePass {
             });
             pass.set_pipeline(&self.cluster_bounds);
             pass.set_bind_group(BIND_GROUP_CLUSTERING, &self.resources.bind_group, &[]);
-            pass.set_bind_group(BIND_GROUP_SCENE, &world.camera.bind_group, &[]);
             pass.set_bind_group(BIND_GROUP_SCENE, &world.scene_bind_group, &[]);
 
             let nwg = (UVec3::from(CLUSTER_XYZ) + UVec3::from(CLUSTER_WG_SIZE) - 1)
@@ -166,7 +168,6 @@ impl ClusteringComputePass {
             });
             pass.set_pipeline(&self.assign_lights);
             pass.set_bind_group(BIND_GROUP_CLUSTERING, &self.resources.bind_group, &[]);
-            pass.set_bind_group(BIND_GROUP_SCENE, &world.camera.bind_group, &[]);
             pass.set_bind_group(BIND_GROUP_SCENE, &world.scene_bind_group, &[]);
 
             let nwg = (UVec3::from(CLUSTER_XYZ) + UVec3::from(CLUSTER_WG_SIZE) - 1)

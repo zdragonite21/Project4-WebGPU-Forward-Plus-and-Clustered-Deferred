@@ -1,8 +1,8 @@
 import package::lib::constants::{bind_group_scene, move_lights_workgroup_size};
 import package::lib::core::{LightSet};
 
-@group(bind_group_scene) @binding(0) var<storage, read_write> lightSet: LightSet;
-@group(bind_group_scene) @binding(1) var<uniform> time: f32;
+@group(bind_group_scene) @binding(1) var<storage, read_write> lightSet: LightSet;
+@group(bind_group_scene) @binding(2) var<uniform> time: f32;
 
 // https://gist.github.com/munrocket/236ed5ba7e409b8bdf1ff6eca5dcdc39
 // MIT License. © Stefan Gustavson, Munrocket
