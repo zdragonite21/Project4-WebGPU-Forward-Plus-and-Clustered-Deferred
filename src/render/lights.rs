@@ -1,7 +1,10 @@
 use glam::Vec3;
 use wgpu::util::DeviceExt;
 
-use crate::{render::world::RenderWorld, shader_constants::{BIND_GROUP_SCENE, MOVE_LIGHTS_WORKGROUP_SIZE}};
+use crate::{
+    render::world::RenderWorld,
+    shader_constants::{BIND_GROUP_SCENE, MOVE_LIGHTS_WORKGROUP_SIZE},
+};
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable, Default)]
@@ -64,8 +67,21 @@ impl GpuLights {
             num_lights: Self::NUM_LIGHTS,
         }
     }
-}
 
+    pub fn update(&mut self, queue: &wgpu::Queue, num_lights: u32) {
+        if self.num_lights != num_lights {
+            self.num_lights = num_lights;
+            queue.write_buffer(
+                &self.buffer,
+                0,
+                &bytemuck::bytes_of(&LightsHeader {
+                    num_lights: self.num_lights,
+                    _pad: [0; 3],
+                }),
+            );
+        }
+    }
+}
 
 pub struct LightsComputePass {
     pipeline: wgpu::ComputePipeline,

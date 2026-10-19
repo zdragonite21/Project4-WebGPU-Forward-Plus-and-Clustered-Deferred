@@ -2,9 +2,7 @@ use glam::Mat4;
 use wgpu::util::DeviceExt;
 
 use crate::{
-    camera::{Camera, CameraRig, Projection},
-    render::lights::GpuLights,
-    world::World,
+    camera::{Camera, CameraRig, Projection}, render::lights::GpuLights, settings::Settings, world::World,
 };
 
 pub struct RenderWorld {
@@ -92,9 +90,10 @@ impl RenderWorld {
         }
     }
 
-    pub fn upload(&mut self, queue: &wgpu::Queue, world: &World) {
+    pub fn upload(&mut self, queue: &wgpu::Queue, world: &World, settings: &Settings) {
         self.camera.upload(queue, &world.cam_rig);
         self.globals.upload(queue, world.time);
+        self.lights.update(queue, settings.light_count);
     }
 }
 

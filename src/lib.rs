@@ -7,4 +7,6 @@ mod world;
 mod input;
 mod gpu;
 mod assets;
+mod ui;
+mod settings;
 pub mod shader_constants;

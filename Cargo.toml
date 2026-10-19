@@ -20,6 +20,10 @@ opt-level = 3
 [dependencies]
 anyhow = "1.0.104"
 bytemuck = { version = "1.25", features = ["derive"] }
+egui = "0.37"
+egui-wgpu = "0.37"
+# clipboard (arboard) does not build for wasm, so it is native-only below
+egui-winit = { version = "0.37", default-features = false }
 env_logger = "0.11.11"
 glam = { version = "0.34", features = ["bytemuck"] }
 gltf = { version = "1.4.1", default-features = false, features = ["utils", "names"] }
@@ -31,6 +35,9 @@ rand = "0.10.3"
 wesl-core = "0.1"
 wgpu = "30"
 winit = "0.30.13"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+egui-winit = { version = "0.37", features = ["clipboard", "links", "wayland", "x11"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1.6"

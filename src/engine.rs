@@ -1,7 +1,19 @@
 use crate::{
-    assets::{gltf_importer, gltf_loader}, frame_clock::FrameClock, gpu::Gpu, input::{CursorState, Input}, render::{
-        Renderer, assets::RenderAssets, forward_plus::ForwardPlusRenderer, lights::LightsComputePass, naive::NaiveRenderer, world::RenderWorld,
-    }, world::World,
+    assets::{gltf_importer, gltf_loader},
+    frame_clock::FrameClock,
+    gpu::Gpu,
+    input::{CursorState, Input},
+    render::{
+        Renderer,
+        assets::RenderAssets,
+        forward_plus::ForwardPlusRenderer,
+        lights::{GpuLights, LightsComputePass},
+        naive::NaiveRenderer,
+        world::RenderWorld,
+    },
+    settings::{RenderMode, Settings},
+    ui::Ui,
+    world::World,
 };
 use std::sync::Arc;
 use winit::{
@@ -21,6 +33,9 @@ pub struct Engine {
     input: Input,
     cursor: CursorState,
     frame_clock: FrameClock,
+    settings: Settings,
+    render_mode: RenderMode,
+    ui: Ui,
 }
 
 impl Engine {
@@ -39,14 +54,6 @@ impl Engine {
 
         let render_world = RenderWorld::new(&gpu.device, &world);
 
-        // let renderer = Box::new(NaiveRenderer::new(
-        //     &gpu.device,
-        //     gpu.render_format,
-        //     &render_world,
-        //     &assets,
-        //     gpu.size().x,
-        //     gpu.size().y,
-        // ));
         let renderer = Box::new(ForwardPlusRenderer::new(
             &gpu.device,
             gpu.render_format,
@@ -62,6 +69,14 @@ impl Engine {
         let input = Input::default();
         let cursor = CursorState::default();
         let frame_clock = FrameClock::new();
+        let ui = Ui::new(&window, &gpu);
+
+        let render_mode = RenderMode::ForwardPlus;
+
+        let settings = Settings {
+            light_count: render_world.lights.num_lights,
+            render_mode,
+        };
 
         Ok(Self {
             window,
@@ -74,6 +89,9 @@ impl Engine {
             input,
             cursor,
             frame_clock,
+            settings,
+            render_mode,
+            ui,
         })
     }
 
@@ -87,6 +105,10 @@ impl Engine {
     }
 
     pub fn handle_window_event(&mut self, event: &WindowEvent) -> bool {
+        if !self.cursor.grabbed && self.ui.on_window_event(&self.window, event) {
+            return false;
+        }
+
         match event {
             WindowEvent::KeyboardInput {
                 event:
@@ -159,6 +181,57 @@ impl Engine {
         self.renderer.resize(&self.gpu.device, self.gpu.size());
     }
 
+    fn draw_ui(
+        &mut self,
+        encoder: &mut wgpu::CommandEncoder,
+        view: &wgpu::TextureView,
+    ) -> Vec<wgpu::CommandBuffer> {
+        self.ui.draw(&self.window, &self.gpu, encoder, view, |ctx| {
+            egui::Window::new("Settings").show(ctx, |ui| {
+                ui.add(
+                    egui::Slider::new(
+                        &mut self.settings.light_count,
+                        0..=GpuLights::MAX_NUM_LIGHTS,
+                    )
+                    .text("num lights"),
+                );
+
+                egui::ComboBox::from_label("render mode").show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.settings.render_mode, RenderMode::Naive, "naive");
+                    ui.selectable_value(
+                        &mut self.settings.render_mode,
+                        RenderMode::ForwardPlus,
+                        "forward+",
+                    );
+                });
+            });
+        })
+    }
+
+    fn update_renderer(&mut self) {
+        if self.render_mode != self.settings.render_mode {
+            self.renderer = match self.settings.render_mode {
+                RenderMode::ForwardPlus => Box::new(ForwardPlusRenderer::new(
+                    &self.gpu.device,
+                    self.gpu.render_format,
+                    &self.render_world,
+                    &self.assets,
+                    self.gpu.size().x,
+                    self.gpu.size().y,
+                )),
+                RenderMode::Naive => Box::new(NaiveRenderer::new(
+                    &self.gpu.device,
+                    self.gpu.render_format,
+                    &self.render_world,
+                    &self.assets,
+                    self.gpu.size().x,
+                    self.gpu.size().y,
+                )),
+            };
+            self.render_mode = self.settings.render_mode;
+        }
+    }
+
     pub fn frame(&mut self) -> anyhow::Result<()> {
         // start frame
         self.window.request_redraw();
@@ -171,7 +244,10 @@ impl Engine {
         self.frame_clock.tick();
         self.world
             .update(&self.input, &mut self.cursor, &self.frame_clock);
-        self.render_world.upload(&self.gpu.queue, &self.world);
+        self.render_world
+            .upload(&self.gpu.queue, &self.world, &self.settings);
+
+        self.update_renderer();
 
         let mut encoder = self
             .gpu
@@ -191,8 +267,12 @@ impl Engine {
             &self.assets,
         )?;
 
+        let ui_cmd_bufs = self.draw_ui(&mut encoder, &frame.view);
+
         // finish frame
-        self.gpu.queue.submit([encoder.finish()]);
+        self.gpu
+            .queue
+            .submit(ui_cmd_bufs.into_iter().chain([encoder.finish()]));
         self.gpu.present(frame);
 
         self.update_capture();
