@@ -9,8 +9,7 @@ WebGL Forward+ and Clustered Deferred Shading
 
 ### Live Demo
 
-[![](img/thumb.png)](https://zdragonite21.github.io/Project4-WebGPU-Forward-Plus-and-Clustered-Deferred/)
-
+[![](image-1.png)](https://zdragonite21.github.io/Project4-WebGPU-Forward-Plus-and-Clustered-Deferred/)
 Link: https://zdragonite21.github.io/Project4-WebGPU-Forward-Plus-and-Clustered-Deferred/
 
 ### bloopers
