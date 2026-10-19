@@ -20,7 +20,7 @@ struct Cluster {
     bounds: Aabb,
 }
 
-struct ClusterSet {
+struct ClusterLights {
     num_lights: u32,
     lights: array<u32, max_lights_per_cluster>,
 }
@@ -46,7 +46,7 @@ fn calculate_light_contrib(light: Light, posWorld: vec3f, nor: vec3f) -> vec3f {
 
 fn ndc_to_cluster_idx(ndc: vec3f) -> u32 {
     let cluster_id = ndc_to_cluster_id(ndc);
-    let c = min(vec3u(floor(cluster_id)), cluster_xyz - 1);
+    let c = min(vec3u(max(floor(cluster_id), vec3f(0))), cluster_xyz - 1);
 
     return cluster_id_to_idx(c);
 }
@@ -62,18 +62,4 @@ fn cluster_id_to_idx(c: vec3u) -> u32 {
     return c.z * cluster_xyz.x * cluster_xyz.y + c.y * cluster_xyz.x + c.x;
 }
 
-fn world_to_ndc(p: vec3f, view_proj: mat4x4f) -> vec3f {
-    var ndc = view_proj * vec4f(p, 1);
-    ndc /= ndc.w;
-    return ndc.xyz;
-}
-
-fn cluster_idx_to_view(id: vec3u, inv_proj: mat4x4f) -> vec3f {
-    var ndc = vec3f(id) / vec3f(cluster_xyz);
-    ndc.xy = 2.0 * ndc.xy - 1.0;
-
-    let h = inv_proj * vec4f(ndc.xyz, 1.0);
-    let view = h.xyz / h.w;
-
-    return view;
-}
+// todo: add logrithmic depth slicing in view space

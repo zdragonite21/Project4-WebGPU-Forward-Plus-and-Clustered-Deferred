@@ -4,7 +4,7 @@ import package::lib::constants::{
     bind_group_scene,
     bind_group_transforms
 };
-import package::lib::core::{CameraUniforms, LightSet, ClusterSet, calculate_light_contrib, ndc_to_cluster_idx, world_to_ndc};
+import package::lib::core::{CameraUniforms, LightSet, ClusterLights, calculate_light_contrib, ndc_to_cluster_idx};
 
 struct FragInput {
     @builtin(position) frag_pos: vec4f,
@@ -16,7 +16,7 @@ struct FragInput {
 @group(bind_group_scene) @binding(0)
 var<storage, read_write> light_set: LightSet;
 @group(bind_group_scene) @binding(1)
-var<storage, read_write> cluster_set: array<ClusterSet>;
+var<storage, read_write> cluster_lights: array<ClusterLights>;
 
 @group(bind_group_model) @binding(0)
 var<uniform> camera: CameraUniforms;
@@ -33,10 +33,11 @@ fn fs_main(in: FragInput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    var ndc = world_to_ndc(in.pos, camera.proj * camera.view);
+    let clip = camera.proj * camera.view * vec4(in.pos, 1);
+    let ndc = clip.xyz / clip.w
 
-    let cluster_idx = ndc_to_cluster_idx(ndc.xyz);
-    let cluster = &cluster_set[cluster_idx];
+    let cluster_idx = ndc_to_cluster_idx(ndc);
+    let cluster = &cluster_lights[cluster_idx];
 
     var contrib = vec3f(0);
     for(var idx = 0u; idx < cluster.num_lights; idx++) {

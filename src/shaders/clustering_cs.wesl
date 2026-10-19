@@ -1,21 +1,12 @@
 import package::lib::constants::{
     bind_group_scene,
+    bind_group_model,
+    cluster_wg_size,
     cluster_xyz,
     light_radius,
-    max_lights_per_cluster,
-    move_lights_workgroup_size
+    max_lights_per_cluster
 };
-import package::lib::core::{
-    Aabb,
-    CameraUniforms,
-    Cluster,
-    ClusterSet,
-    LightSet,
-    cluster_id_to_idx,
-    cluster_idx_to_view,
-    ndc_to_cluster_id,
-    world_to_ndc
-};
+import package::lib::core::{Aabb, CameraUniforms, Cluster, ClusterLights, LightSet, cluster_id_to_idx};
 
 // ------------------------------------
 // Calculating cluster bounds:
@@ -45,65 +36,72 @@ var<uniform> camera: CameraUniforms;
 @group(bind_group_scene) @binding(0)
 var<storage, read_write> light_set: LightSet;
 @group(bind_group_scene) @binding(1)
-var<storage, read_write> cluster_set: array<ClusterSet>;
+var<storage, read_write> cluster_lights: array<ClusterLights>;
 @group(bind_group_scene) @binding(2)
 var<storage, read_write> clusters: array<Cluster>;
 
-// todo: 3d workgroup
-@compute @workgroup_size(move_lights_workgroup_size)
-fn cluster_bounds(
-    @builtin(global_invocation_id) id: vec3u,
-    @builtin(global_invocation_index) idx: u32,
-) {
-    if idx >= cluster_xyz.x * cluster_xyz.y * cluster_xyz.z {
+fn ndc_to_view(ndc: vec3f) -> vec3f {
+    var h = camera.inv_proj * vec4f(ndc, 1);
+    return h.xyz / h.w;
+}
+
+fn set_bounds(bounds: Aabb, ndc: vec3f) -> Aabb {
+    let p = ndc_to_view(ndc);
+    return Aabb(min(bounds.min, p), max(bounds.max, p));
+}
+
+@compute @workgroup_size(cluster_wg_size.x, cluster_wg_size.y, cluster_wg_size.z)
+fn cluster_bounds(@builtin(global_invocation_id) gid: vec3u) {
+    if any(gid >= cluster_xyz) {
         return;
     }
+    let idx = cluster_id_to_idx(gid);
 
-    var bounds: Aabb;
-    bounds.min = cluster_idx_to_view(id, camera.inv_proj);
-    bounds.max = cluster_idx_to_view(id + 1, camera.inv_proj);
+    let smn = vec2f(gid.xy) / vec2f(cluster_xyz.xy) * 2 - 1;
+    let smx = vec2f(gid.xy + 1) / vec2f(cluster_xyz.xy) * 2 - 1;
 
-    // could use shared memory here
+    let zmn = f32(gid.z) / f32(cluster_xyz.z);
+    let zmx = f32(gid.z + 1) / f32(cluster_xyz.z);
+
+    let p = ndc_to_view(vec3f(smn.xy, zmn));
+    var bounds: Aabb = Aabb(p, p);
+    bounds = set_bounds(bounds, vec3f(smx.xy, zmn));
+    bounds = set_bounds(bounds, vec3f(smn.x, smx.y, zmn));
+    bounds = set_bounds(bounds, vec3f(smx.x, smn.y, zmn));
+
+    bounds = set_bounds(bounds, vec3f(smn.xy, zmx));
+    bounds = set_bounds(bounds, vec3f(smx.xy, zmx));
+    bounds = set_bounds(bounds, vec3f(smn.x, smx.y, zmx));
+    bounds = set_bounds(bounds, vec3f(smx.x, smn.y, zmx));
 
     clusters[idx] = Cluster(bounds);
 }
 
-@compute @workgroup_size(move_lights_workgroup_size)
-fn assign_lights(@builtin(global_invocation_index) idx: u32) {
-    if idx >= light_set.num_lights {
+@compute @workgroup_size(cluster_wg_size.x, cluster_wg_size.y, cluster_wg_size.z)
+fn assign_lights(@builtin(global_invocation_id) gid: vec3u) {
+    if any(gid >= cluster_xyz) {
         return;
     }
+    let idx = cluster_id_to_idx(gid);
 
-    let light = light_set.lights[idx];
-    let view_proj = camera.proj * camera.view;
+    let cluster = &cluster_lights[idx];
+    var nlights = 0u;
+    let bounds = clusters[idx].bounds;
 
-    var b: Aabb;
-    b.min = light.pos - light_radius;
-    b.max = light.pos + light_radius;
+    for(var i = 0u; i < light_set.num_lights; i++) {
+        if nlights >= max_lights_per_cluster {
+            break;
+        }
 
-    b.min = world_to_ndc(b.min, view_proj);
-    b.max = world_to_ndc(b.max, view_proj);
+        let light = light_set.lights[i];
+        let c = camera.view * vec4f(light.pos, 1);
+        let closest = clamp(c.xyz, bounds.min, bounds.max);
+        let dist = closest - c.xyz;
 
-    b.min = ndc_to_cluster_id(b.min);
-    b.max = ndc_to_cluster_id(b.max);
-
-    let cmin = vec3u(max(floor(b.min), vec3f(0)));
-    let cmax = min(vec3u(ceil(b.max)), cluster_xyz);
-
-    for(var z = cmin.z; z < cmax.z; z++) {
-        for(var y = cmin.y; y < cmax.y; y++) {
-            for(var x = cmin.x; x < cmax.x; x++) {
-                // can do a finer sphere overlap check 
-                let cidx = cluster_id_to_idx(vec3u(x, y, z));
-                let nlights = cluster_set[cidx].num_lights;
-
-                if nlights >= max_lights_per_cluster {
-                    continue;
-                }
-
-                cluster_set[cidx].lights[nlights] = idx;
-                cluster_set[cidx].num_lights++;
-            }
+        if dot(dist, dist) <= light_radius * light_radius {
+            cluster.lights[nlights] = i;
+            nlights++;
         }
     }
+    cluster.num_lights = nlights;
 }

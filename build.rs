@@ -38,6 +38,7 @@ fn write_constants() {
         ("bind_group_material", format!("{BIND_GROUP_MATERIAL}u")),
         ("move_lights_workgroup_size", format!("{MOVE_LIGHTS_WORKGROUP_SIZE}u")),
         ("cluster_xyz", format!("vec3u{CLUSTER_XYZ:?}")),
+        ("cluster_wg_size", format!("vec3u{CLUSTER_WG_SIZE:?}")),
         ("max_lights_per_cluster", format!("{MAX_LIGHTS_PER_CLUSTER:?}u")),
         ("light_radius", format!("{LIGHT_RADIUS:?}f")),
     ];

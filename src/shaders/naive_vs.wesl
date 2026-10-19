@@ -4,7 +4,7 @@ import package::lib::constants::{
     bind_group_scene,
     bind_group_transforms
 };
-import package::lib::core::CameraUniforms;
+import package::lib::core::{CameraUniforms};
 
 struct VertexInput {
     @location(0) pos: vec3<f32>,
@@ -23,7 +23,7 @@ struct VertexOutput {
 var<uniform> camera: CameraUniforms;
 
 @group(bind_group_transforms) @binding(0)
-var<storage, read> transforms: array<mat4x4<f32>>;
+var<storage, read> transforms: array<mat4x4f>;
 
 @vertex
 fn vs_main(@builtin(instance_index) trans_idx: u32, in: VertexInput) -> VertexOutput {
