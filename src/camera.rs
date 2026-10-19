@@ -65,8 +65,8 @@ impl Camera {
 pub struct Projection {
     aspect: f32,
     fovy_rad: f32,
-    znear: f32,
-    zfar: f32,
+    pub znear: f32,
+    pub zfar: f32,
 }
 
 impl Projection {

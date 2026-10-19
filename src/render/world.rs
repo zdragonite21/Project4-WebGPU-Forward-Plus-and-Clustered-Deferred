@@ -142,6 +142,9 @@ struct CameraUniform {
     view: Mat4,
     proj: Mat4,
     inv_proj: Mat4,
+    near: f32,
+    far: f32,
+    _pad: [f32; 2],
 }
 
 impl CameraUniform {
@@ -150,6 +153,9 @@ impl CameraUniform {
             view: camera.view_matrix(),
             proj: projection.proj_matrix(),
             inv_proj: Mat4::inverse(&projection.proj_matrix()),
+            near: projection.znear,
+            far: projection.zfar,
+            _pad: [0.0; 2],
         }
     }
 }

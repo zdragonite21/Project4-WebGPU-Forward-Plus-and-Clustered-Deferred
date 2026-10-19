@@ -9,4 +9,4 @@ pub const LIGHT_RADIUS: f32 = 2.0;
 
 pub const CLUSTER_XYZ: (u32, u32, u32) = (16, 9, 20);
 pub const CLUSTER_WG_SIZE: (u32, u32, u32) = (4, 4, 4);
-pub const MAX_LIGHTS_PER_CLUSTER: u32 = 100;
+pub const MAX_LIGHTS_PER_CLUSTER: u32 = 1000;

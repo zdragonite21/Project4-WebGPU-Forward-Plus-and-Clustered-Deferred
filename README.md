@@ -15,6 +15,10 @@ WebGL Forward+ and Clustered Deferred Shading
 
 [![](img/video.mp4)](TODO)
 
+### bloopers
+
+![alt text](image.png)
+
 ### (TODO: Your README)
 
 *DO NOT* leave the README to the last minute! It is a crucial part of the

@@ -2,9 +2,10 @@ import package::lib::constants::{
     bind_group_material,
     bind_group_scene,
     bind_group_transforms,
-    bind_group_clustering
+    bind_group_clustering,
+    cluster_xyz
 };
-import package::lib::core::{CameraUniforms, LightSet, ClusterLights, calculate_light_contrib, ndc_to_cluster_idx};
+import package::lib::core::{CameraUniforms, LightSet, ClusterLights, calculate_light_contrib, ndc_to_cluster_idx, depth_to_slice};
 
 struct FragInput {
     @builtin(position) frag_pos: vec4f,
@@ -33,10 +34,15 @@ fn fs_main(in: FragInput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    let clip = camera.proj * camera.view * vec4(in.pos, 1);
-    let ndc = clip.xyz / clip.w;
+    let view = camera.view * vec4(in.pos, 1);
+    let d = -view.z;
+    let slice_z = depth_to_slice(d, camera.near, camera.far, f32(cluster_xyz.z));
 
-    let cluster_idx = ndc_to_cluster_idx(ndc);
+    let clip = camera.proj * view;
+    let ndc = (clip.xyz / clip.w).xy;
+
+
+    let cluster_idx = ndc_to_cluster_idx(ndc, slice_z);
     let cluster = &cluster_lights[cluster_idx];
 
     var contrib = vec3f(0);
@@ -46,5 +52,6 @@ fn fs_main(in: FragInput) -> @location(0) vec4<f32> {
     }
 
     let out_col = color.rgb * contrib;
+    // let out_col = vec3f(f32(cluster.num_lights) / 1000.0);
     return vec4(out_col, 1);
 }
