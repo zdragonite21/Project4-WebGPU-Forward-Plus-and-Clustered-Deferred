@@ -55,7 +55,7 @@ const bboxMax = vec3f(10, 8, 5);
 @workgroup_size(move_lights_workgroup_size)
 fn main(@builtin(global_invocation_id) globalIdx: vec3u) {
     let lightIdx = globalIdx.x;
-    if (lightIdx >= lightSet.numLights) {
+    if (lightIdx >= lightSet.num_lights) {
         return;
     }
 

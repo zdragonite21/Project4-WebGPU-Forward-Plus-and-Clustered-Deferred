@@ -29,7 +29,7 @@ fn fs_main(in: FragInput) -> @location(0) vec4<f32> {
     }
 
     var contrib = vec3f(0);
-    for(var idx = 0u; idx < light_set.numLights; idx++) {
+    for(var idx = 0u; idx < light_set.num_lights; idx++) {
         let light = light_set.lights[idx];
         contrib += calculate_light_contrib(light, in.pos, in.nor);
     }

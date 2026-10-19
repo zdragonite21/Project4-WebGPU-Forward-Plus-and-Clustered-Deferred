@@ -122,6 +122,7 @@ impl GpuGlobals {
 struct CameraUniform {
     view: Mat4,
     proj: Mat4,
+    inv_proj: Mat4,
 }
 
 impl CameraUniform {
@@ -129,6 +130,7 @@ impl CameraUniform {
         Self {
             view: camera.view_matrix(),
             proj: projection.proj_matrix(),
+            inv_proj: Mat4::inverse(self.proj)
         }
     }
 }

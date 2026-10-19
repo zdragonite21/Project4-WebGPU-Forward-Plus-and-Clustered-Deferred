@@ -11,12 +11,12 @@ use crate::{
 
 use super::Renderer;
 
-pub struct NaiveRenderer {
+pub struct ForwardPlusRenderer {
     pipeline: wgpu::RenderPipeline,
     depth_texture: GpuTexture,
 }
 
-impl NaiveRenderer {
+impl ForwardPlusRenderer {
     pub fn new(
         device: &wgpu::Device,
         render_format: wgpu::TextureFormat,
@@ -101,7 +101,7 @@ impl NaiveRenderer {
     }
 }
 
-impl Renderer for NaiveRenderer {
+impl Renderer for ForwardPlusRenderer {
     fn draw(
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
