@@ -37,7 +37,7 @@ fn hue_to_rgb(h: f32) -> Vec3 {
 
 impl GpuLights {
     pub const NUM_LIGHTS: u32 = 5000;
-    pub const MAX_NUM_LIGHTS: u32 = 5000;
+    pub const MAX_NUM_LIGHTS: u32 = 10000;
     pub const LIGHT_INTENSITY: f32 = 0.1;
 
     pub fn new(device: &wgpu::Device) -> Self {
