@@ -205,6 +205,14 @@ impl Engine {
                     );
                 });
             });
+
+            egui::Window::new("frame time")
+                .title_bar(false)
+                .resizable(false)
+                .anchor(egui::Align2::RIGHT_TOP, [-8.0, 8.0])
+                .show(ctx, |ui| {
+                    ui.label(format!("{:.2} ms", self.frame_clock.dt.as_secs_f32() * 1000.0));
+                });
         })
     }
 
