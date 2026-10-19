@@ -1,6 +1,5 @@
 import package::lib::constants::{
     bind_group_material,
-    bind_group_model,
     bind_group_scene,
     bind_group_transforms
 };
@@ -13,7 +12,7 @@ struct FragInput {
     @location(2) uv: vec2f,
 }
 
-@group(bind_group_scene) @binding(0)
+@group(bind_group_scene) @binding(1)
 var<storage, read_write> light_set: LightSet;
 
 @group(bind_group_material) @binding(0)

@@ -2,9 +2,9 @@ use glam::UVec2;
 
 use crate::{
     assets::{Handle, material::GpuMaterial, mesh::Vertex, texture::GpuTexture},
-    render::{assets::RenderAssets, world::RenderWorld},
+    render::{assets::RenderAssets, clustering::ClusteringComputePass, world::RenderWorld},
     shader_constants::{
-        BIND_GROUP_MATERIAL, BIND_GROUP_MODEL, BIND_GROUP_SCENE, BIND_GROUP_TRANSFORMS,
+        BIND_GROUP_CLUSTERING, BIND_GROUP_MATERIAL, BIND_GROUP_SCENE, BIND_GROUP_TRANSFORMS,
     },
     world::World,
 };
@@ -14,6 +14,7 @@ use super::Renderer;
 pub struct ForwardPlusRenderer {
     pipeline: wgpu::RenderPipeline,
     depth_texture: GpuTexture,
+    cluster_pass: ClusteringComputePass,
 }
 
 impl ForwardPlusRenderer {
@@ -25,14 +26,16 @@ impl ForwardPlusRenderer {
         width: u32,
         height: u32,
     ) -> Self {
+        let cluster_pass = ClusteringComputePass::new(&device, &render_world);
+
         let shader_vs = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("naive_vs"),
             source: wgpu::ShaderSource::Wgsl(wesl_core::include_wesl!("naive_vs").into()),
         });
 
         let shader_fs = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("naive_fs"),
-            source: wgpu::ShaderSource::Wgsl(wesl_core::include_wesl!("naive_fs").into()),
+            label: Some("forward_plus_fs"),
+            source: wgpu::ShaderSource::Wgsl(wesl_core::include_wesl!("forward_plus_fs").into()),
         });
 
         let depth_texture =
@@ -46,6 +49,7 @@ impl ForwardPlusRenderer {
                     Some(&render_world.camera.bind_group_layout),
                     Some(&render_world.transforms.bind_group_layout),
                     Some(&render_assets.material_layout),
+                    Some(&cluster_pass.resources.bind_group_layout),
                 ],
                 immediate_size: 0,
             });
@@ -97,12 +101,11 @@ impl ForwardPlusRenderer {
         Self {
             pipeline,
             depth_texture,
+            cluster_pass,
         }
     }
-}
 
-impl Renderer for ForwardPlusRenderer {
-    fn draw(
+    fn shade(
         &mut self,
         encoder: &mut wgpu::CommandEncoder,
         view: &wgpu::TextureView,
@@ -141,7 +144,12 @@ impl Renderer for ForwardPlusRenderer {
 
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(BIND_GROUP_SCENE, &render_world.scene_bind_group, &[]);
-        render_pass.set_bind_group(BIND_GROUP_MODEL, &render_world.camera.bind_group, &[]);
+        render_pass.set_bind_group(BIND_GROUP_SCENE, &render_world.camera.bind_group, &[]);
+        render_pass.set_bind_group(
+            BIND_GROUP_CLUSTERING,
+            &self.cluster_pass.resources.bind_group,
+            &[],
+        );
         render_pass.set_bind_group(
             BIND_GROUP_TRANSFORMS,
             &render_world.transforms.bind_group,
@@ -173,6 +181,20 @@ impl Renderer for ForwardPlusRenderer {
         }
 
         Ok(())
+    }
+}
+
+impl Renderer for ForwardPlusRenderer {
+    fn draw(
+        &mut self,
+        encoder: &mut wgpu::CommandEncoder,
+        view: &wgpu::TextureView,
+        render_world: &RenderWorld,
+        world: &World,
+        render_assets: &RenderAssets,
+    ) -> anyhow::Result<()> {
+        self.cluster_pass.dispatch(encoder, render_world);
+        self.shade(encoder, view, render_world, world, render_assets)
     }
 
     fn resize(&mut self, device: &wgpu::Device, size: UVec2) {

@@ -4,7 +4,7 @@ use crate::{
     assets::{Handle, material::GpuMaterial, mesh::Vertex, texture::GpuTexture},
     render::{assets::RenderAssets, world::RenderWorld},
     shader_constants::{
-        BIND_GROUP_MATERIAL, BIND_GROUP_MODEL, BIND_GROUP_SCENE, BIND_GROUP_TRANSFORMS,
+        BIND_GROUP_MATERIAL, BIND_GROUP_SCENE, BIND_GROUP_TRANSFORMS,
     },
     world::World,
 };
@@ -141,7 +141,7 @@ impl Renderer for NaiveRenderer {
 
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(BIND_GROUP_SCENE, &render_world.scene_bind_group, &[]);
-        render_pass.set_bind_group(BIND_GROUP_MODEL, &render_world.camera.bind_group, &[]);
+        render_pass.set_bind_group(BIND_GROUP_SCENE, &render_world.camera.bind_group, &[]);
         render_pass.set_bind_group(
             BIND_GROUP_TRANSFORMS,
             &render_world.transforms.bind_group,

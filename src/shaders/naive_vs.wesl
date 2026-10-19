@@ -1,6 +1,5 @@
 import package::lib::constants::{
     bind_group_material,
-    bind_group_model,
     bind_group_scene,
     bind_group_transforms
 };
@@ -19,7 +18,7 @@ struct VertexOutput {
     @location(2) uv: vec2f,
 }
 
-@group(bind_group_model) @binding(0)
+@group(bind_group_scene) @binding(0)
 var<uniform> camera: CameraUniforms;
 
 @group(bind_group_transforms) @binding(0)

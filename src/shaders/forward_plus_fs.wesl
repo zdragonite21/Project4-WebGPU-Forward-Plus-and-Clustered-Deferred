@@ -1,8 +1,8 @@
 import package::lib::constants::{
     bind_group_material,
-    bind_group_model,
     bind_group_scene,
-    bind_group_transforms
+    bind_group_transforms,
+    bind_group_clustering
 };
 import package::lib::core::{CameraUniforms, LightSet, ClusterLights, calculate_light_contrib, ndc_to_cluster_idx};
 
@@ -14,12 +14,12 @@ struct FragInput {
 }
 
 @group(bind_group_scene) @binding(0)
-var<storage, read_write> light_set: LightSet;
-@group(bind_group_scene) @binding(1)
-var<storage, read_write> cluster_lights: array<ClusterLights>;
-
-@group(bind_group_model) @binding(0)
 var<uniform> camera: CameraUniforms;
+@group(bind_group_scene) @binding(1)
+var<storage, read_write> light_set: LightSet;
+
+@group(bind_group_clustering) @binding(0)
+var<storage, read_write> cluster_lights: array<ClusterLights>;
 
 @group(bind_group_material) @binding(0)
 var diffuse_tex: texture_2d<f32>;
@@ -34,7 +34,7 @@ fn fs_main(in: FragInput) -> @location(0) vec4<f32> {
     }
 
     let clip = camera.proj * camera.view * vec4(in.pos, 1);
-    let ndc = clip.xyz / clip.w
+    let ndc = clip.xyz / clip.w;
 
     let cluster_idx = ndc_to_cluster_idx(ndc);
     let cluster = &cluster_lights[cluster_idx];

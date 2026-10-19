@@ -1,5 +1,7 @@
 use crate::{
-    assets::{gltf_importer, gltf_loader}, frame_clock::FrameClock, gpu::Gpu, input::{CursorState, Input}, render::{LightsComputePass, Renderer, assets::RenderAssets, naive::NaiveRenderer, world::RenderWorld}, world::World,
+    assets::{gltf_importer, gltf_loader}, frame_clock::FrameClock, gpu::Gpu, input::{CursorState, Input}, render::{
+        Renderer, assets::RenderAssets, forward_plus::ForwardPlusRenderer, lights::LightsComputePass, naive::NaiveRenderer, world::RenderWorld,
+    }, world::World,
 };
 use std::sync::Arc;
 use winit::{
@@ -37,7 +39,15 @@ impl Engine {
 
         let render_world = RenderWorld::new(&gpu.device, &world);
 
-        let renderer = Box::new(NaiveRenderer::new(
+        // let renderer = Box::new(NaiveRenderer::new(
+        //     &gpu.device,
+        //     gpu.render_format,
+        //     &render_world,
+        //     &assets,
+        //     gpu.size().x,
+        //     gpu.size().y,
+        // ));
+        let renderer = Box::new(ForwardPlusRenderer::new(
             &gpu.device,
             gpu.render_format,
             &render_world,
@@ -145,9 +155,7 @@ impl Engine {
     pub fn resize(&mut self, width: u32, height: u32) {
         self.gpu.resize(width, height);
 
-        self.world
-            .cam_rig
-            .resize(self.gpu.size());
+        self.world.cam_rig.resize(self.gpu.size());
         self.renderer.resize(&self.gpu.device, self.gpu.size());
     }
 

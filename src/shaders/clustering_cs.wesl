@@ -1,6 +1,6 @@
 import package::lib::constants::{
     bind_group_scene,
-    bind_group_model,
+    bind_group_clustering,
     cluster_wg_size,
     cluster_xyz,
     light_radius,
@@ -30,14 +30,14 @@ import package::lib::core::{Aabb, CameraUniforms, Cluster, ClusterLights, LightS
 
 //     - Store the number of lights assigned to this cluster.
 
-@group(bind_group_model) @binding(0)
-var<uniform> camera: CameraUniforms;
-
 @group(bind_group_scene) @binding(0)
-var<storage, read_write> light_set: LightSet;
+var<uniform> camera: CameraUniforms;
 @group(bind_group_scene) @binding(1)
+var<storage, read_write> light_set: LightSet;
+
+@group(bind_group_clustering) @binding(0)
 var<storage, read_write> cluster_lights: array<ClusterLights>;
-@group(bind_group_scene) @binding(2)
+@group(bind_group_clustering) @binding(1)
 var<storage, read_write> clusters: array<Cluster>;
 
 fn ndc_to_view(ndc: vec3f) -> vec3f {

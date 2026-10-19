@@ -33,9 +33,9 @@ fn main() {
 fn write_constants() {
     let constants = [
         ("bind_group_scene", format!("{BIND_GROUP_SCENE}u")),
-        ("bind_group_model", format!("{BIND_GROUP_MODEL}u")),
         ("bind_group_transforms", format!("{BIND_GROUP_TRANSFORMS}u")),
         ("bind_group_material", format!("{BIND_GROUP_MATERIAL}u")),
+        ("bind_group_clustering", format!("{BIND_GROUP_CLUSTERING}u")),
         ("move_lights_workgroup_size", format!("{MOVE_LIGHTS_WORKGROUP_SIZE}u")),
         ("cluster_xyz", format!("vec3u{CLUSTER_XYZ:?}")),
         ("cluster_wg_size", format!("vec3u{CLUSTER_WG_SIZE:?}")),

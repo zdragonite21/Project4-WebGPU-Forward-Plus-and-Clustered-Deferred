@@ -52,10 +52,11 @@ fn ndc_to_cluster_idx(ndc: vec3f) -> u32 {
 }
 
 fn ndc_to_cluster_id(ndc: vec3f) -> vec3f {
-    var ndc = ndc;
-    ndc.xy = 0.5 * ndc.xy + 0.5;
+    var _ndc: vec3f = ndc;
+    _ndc.x = 0.5 * _ndc.x + 0.5;
+    _ndc.y = 0.5 * _ndc.y + 0.5;
 
-    return ndc * vec3f(cluster_xyz);
+    return _ndc * vec3f(cluster_xyz);
 }
 
 fn cluster_id_to_idx(c: vec3u) -> u32 {
