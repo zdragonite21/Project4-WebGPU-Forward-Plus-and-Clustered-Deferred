@@ -3,29 +3,27 @@ WebGL Forward+ and Clustered Deferred Shading
 
 **University of Pennsylvania, CIS 565: GPU Programming and Architecture, Project 4**
 
-* (TODO) YOUR NAME HERE
-* Tested on: (TODO) **Google Chrome 222.2** on
-  Windows 22, i7-2222 @ 2.22GHz 22GB, GTX 222 222MB (Moore 2222 Lab)
+- Zachary Leong
+  - [LinkedIn](https://linkedin.com/in/zleong), [personal website](https://zacharyleong.com)
+- Tested on: Windows 11, Ultra 9 185H @ 2.30GHz 32GB, RTX 4060 Laptop (personal)
 
 ### Live Demo
 
-[![](img/thumb.png)](http://TODO.github.io/Project4-WebGPU-Forward-Plus-and-Clustered-Deferred)
+[![](img/thumb.png)](https://zdragonite21.github.io/Project4-WebGPU-Forward-Plus-and-Clustered-Deferred/)
 
-### Demo Video/GIF
-
-[![](img/video.mp4)](TODO)
+Link: https://zdragonite21.github.io/Project4-WebGPU-Forward-Plus-and-Clustered-Deferred/
 
 ### bloopers
 
 ![alt text](image.png)
 
-### (TODO: Your README)
+### thoughts
 
-*DO NOT* leave the README to the last minute! It is a crucial part of the
-project, and we will not be able to grade you without a good README.
+Doing this homework in rust + wgpu was a much larger task than I had anticipated. I, unfortunately, did not get to doing the deferred part of this homework.
 
-This assignment has a considerable amount of performance analysis compared
-to implementation work. Complete the implementation early to leave time!
+### performance analysis
+
+Forward plus has an average frame time (cpu side recorded) of 20ms for 5k lights, while the naive has average frame time of 150ms for 5k lights. 
 
 ### sources
 
